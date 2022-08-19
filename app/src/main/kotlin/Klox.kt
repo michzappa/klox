@@ -1,4 +1,0 @@
-class Klox
-
-fun main() {
-}

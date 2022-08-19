@@ -38,6 +38,6 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass.set("KloxKt")
+    mainClass.set("klox.KloxKt")
     applicationName = "klox"
 }
