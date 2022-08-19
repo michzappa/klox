@@ -5,16 +5,17 @@ import java.io.InputStreamReader
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 class Klox {
-    var hadError = false
+    private var hadError = false
 
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))
         run(String(bytes, Charset.defaultCharset()))
 
         if (hadError) {
-            System.exit(65)
+            exitProcess(65)
         }
     }
 
@@ -32,11 +33,11 @@ class Klox {
         }
     }
 
-    fun run(source: String) {
+    private fun run(source: String) {
         val scanner = Scanner(source)
         val tokens = scanner.scanTokens()
 
-        tokens.forEach { token ->
+       for(token in tokens){
             println(token)
         }
     }
@@ -46,7 +47,7 @@ class Klox {
             report(line, "", message)
         }
 
-        fun report(line: Int, where: String, message: String) {
+        private fun report(line: Int, where: String, message: String) {
             println("[line $line] Error$where: $message")
         }
     }
@@ -59,7 +60,7 @@ fun main(args: Array<String>) {
         println("Usage: klox [script]")
         // exit codes in this interpreter are from the UNIX
         // <sysexits.h> header file
-        System.exit(64)
+        exitProcess(64)
     } else if (args.size == 1) {
         klox.runFile(args[0])
     } else {

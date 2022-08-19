@@ -2,7 +2,6 @@ package klox
 
 import klox.TokenType.*
 
-
 class Scanner(private val source: String) {
     private val tokens = ArrayList<Token>()
     private var start = 0
@@ -12,8 +11,7 @@ class Scanner(private val source: String) {
     fun scanTokens(): List<Token> {
         while (!isAtEnd()) {
             start = current
-            val c = advance()
-            when (c) {
+            when (val c = advance()) {
                 '(' -> addToken(LEFT_PAREN)
                 ')' -> addToken(RIGHT_PAREN)
                 '{' -> addToken(LEFT_BRACE)
@@ -51,11 +49,11 @@ class Scanner(private val source: String) {
                 '"' -> scanString()
                 else -> {
                     if (isDigit(c)) {
-                        scanNumber();
+                        scanNumber()
                     } else if (isAlpha(c)) {
-                        scanIdentifier();
+                        scanIdentifier()
                     } else {
-                        Klox.error(line, "Unexpected character.");
+                        Klox.error(line, "Unexpected character.")
                     }
                 }
             }
@@ -65,7 +63,7 @@ class Scanner(private val source: String) {
         return tokens
     }
 
-    fun scanIdentifier() {
+    private fun scanIdentifier() {
         while (isAlphaNumeric(peek())) advance()
         val text = source.substring(start, current)
         // is this text a keyword?
@@ -89,7 +87,7 @@ class Scanner(private val source: String) {
         addToken(NUMBER, source.substring(start, current).toDouble())
     }
 
-    fun scanString() {
+    private fun scanString() {
         while (peek() != '"' && !isAtEnd()) {
             if (peek() == '\n') {
                 line++
@@ -109,36 +107,36 @@ class Scanner(private val source: String) {
         addToken(STRING, value)
     }
 
-    fun addToken(type: TokenType) {
+    private fun addToken(type: TokenType) {
         addToken(type, null)
     }
 
-    fun addToken(type: TokenType, literal: Any?) {
+    private fun addToken(type: TokenType, literal: Any?) {
         val text = source.substring(start, current)
         tokens.add(Token(type, text, literal, line))
     }
 
-    fun advance(): Char {
+    private fun advance(): Char {
         return source[current++]
     }
 
-    fun isAlpha(c: Char): Boolean {
+    private fun isAlpha(c: Char): Boolean {
         return (c in 'a'..'z') || (c in 'A'..'Z' || c == '_')
     }
 
-    fun isAlphaNumeric(c: Char): Boolean {
+    private fun isAlphaNumeric(c: Char): Boolean {
         return isAlpha(c) || isDigit(c)
     }
 
-    fun isAtEnd(): Boolean {
+    private fun isAtEnd(): Boolean {
         return current >= source.length
     }
 
-    fun isDigit(c: Char): Boolean {
+    private fun isDigit(c: Char): Boolean {
         return c in '0'..'9'
     }
 
-    fun match(expected: Char): Boolean {
+    private fun match(expected: Char): Boolean {
         if (isAtEnd()) {
             return false
         }
@@ -150,7 +148,7 @@ class Scanner(private val source: String) {
         return true
     }
 
-    fun peek(): Char {
+    private fun peek(): Char {
         return (if (isAtEnd()) {
             '\u0000'
         } else {
@@ -158,12 +156,12 @@ class Scanner(private val source: String) {
         })
     }
 
-    fun peekNext(): Char {
+    private fun peekNext(): Char {
         return if (current + 1 >= source.length) '\u0000' else source[current + 1]
     }
 
     companion object {
-        val keywords = hashMapOf<String, TokenType>(
+        val keywords = hashMapOf(
             "and" to AND,
             "class" to CLASS,
             "else" to ELSE,
