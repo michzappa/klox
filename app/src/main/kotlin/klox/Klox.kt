@@ -9,13 +9,12 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 class Klox {
-    private var hadError = false
-
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))
         run(String(bytes, Charset.defaultCharset()))
 
         if (hadError) exitProcess(65)
+        if (hadRuntimeError) exitProcess(70);
     }
 
     fun runPrompt() {
@@ -44,10 +43,13 @@ class Klox {
         // stop if there was a syntax error
         if (hadError) return
 
-        println(AstPrinter().print(expression!!))
+        interpreter.interpret(expression)
     }
 
     companion object {
+        val interpreter = Interpreter()
+        var hadError = false
+        var hadRuntimeError = false
         fun error(line: Int, message: String) {
             report(line, "", message)
         }
@@ -62,6 +64,11 @@ class Klox {
 
         private fun report(line: Int, where: String, message: String) {
             println("[line $line] Error$where: $message")
+        }
+
+        fun runtimeError(error: RuntimeError) {
+            System.err.println("${error.message}\n[line ${error.token.line}]")
+            hadRuntimeError = true
         }
     }
 }
