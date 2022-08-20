@@ -22,17 +22,19 @@ class Scanner(private val source: String) {
                 '+' -> addToken(PLUS)
                 ';' -> addToken(SEMICOLON)
                 '*' -> addToken(STAR)
+                '?' -> addToken(QUESTION)
+                ':' -> addToken(COLON)
                 '!' -> addToken(if (match('=')) BANG_EQUAL else BANG)
                 '=' -> addToken(if (match('=')) EQUAL_EQUAL else EQUAL)
                 '<' -> addToken(if (match('=')) LESS_EQUAL else LESS)
                 '>' -> addToken(if (match('=')) GREATER_EQUAL else GREATER)
                 '/' -> {
-                    // comment handling, since they start with '//'
+                    // comment handling, since they start with '//' or '/*'
                     if (match('/')) {
                         while (peek() != '\n' && !isAtEnd()) {
                             advance()
                         }
-                    } else if (match('*')){
+                    } else if (match('*')) {
                         while (peek() != '*' && peekNext() != '/') {
                             advance()
                         }
@@ -68,9 +70,7 @@ class Scanner(private val source: String) {
         val text = source.substring(start, current)
         // is this text a keyword?
         var type = keywords[text]
-        if (type == null) {
-            type = IDENTIFIER
-        }
+        if (type == null) type = IDENTIFIER
         addToken(type)
     }
 
@@ -137,15 +137,12 @@ class Scanner(private val source: String) {
     }
 
     private fun match(expected: Char): Boolean {
-        if (isAtEnd()) {
-            return false
+        return if (isAtEnd() || source[current] != expected) {
+            false
+        }else{
+            current++
+            true
         }
-        if (source[current] != expected) {
-            return false
-        }
-
-        current++
-        return true
     }
 
     private fun peek(): Char {

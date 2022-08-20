@@ -7,25 +7,43 @@ abstract class Expr {
     fun visitGroupingExpr(expr: Grouping): R
     fun visitLiteralExpr(expr: Literal): R
     fun visitUnaryExpr(expr: Unary): R
+    fun visitCommaExpr(expr: Comma): R
+    fun visitTernaryExpr(expr: Ternary): R
+    fun visitInvalidExpr(expr: Invalid): R
   }
   class Binary(val left: Expr, val operator: Token, val right: Expr) : Expr() {
     override fun <R> accept(visitor: Visitor<R> ): R {
-      return visitor.visitBinaryExpr(this)
+      return visitor.visitBinaryExpr(this);
     }
   }
   class Grouping(val expression: Expr) : Expr() {
     override fun <R> accept(visitor: Visitor<R> ): R {
-      return visitor.visitGroupingExpr(this)
+      return visitor.visitGroupingExpr(this);
     }
   }
   class Literal(val value: Any?) : Expr() {
     override fun <R> accept(visitor: Visitor<R> ): R {
-      return visitor.visitLiteralExpr(this)
+      return visitor.visitLiteralExpr(this);
     }
   }
   class Unary(val operator: Token, val right: Expr) : Expr() {
     override fun <R> accept(visitor: Visitor<R> ): R {
-      return visitor.visitUnaryExpr(this)
+      return visitor.visitUnaryExpr(this);
+    }
+  }
+  class Comma(val left: Expr, val right: Expr) : Expr() {
+    override fun <R> accept(visitor: Visitor<R> ): R {
+      return visitor.visitCommaExpr(this);
+    }
+  }
+  class Ternary(val cond: Expr, val left: Expr, val right: Expr) : Expr() {
+    override fun <R> accept(visitor: Visitor<R> ): R {
+      return visitor.visitTernaryExpr(this);
+    }
+  }
+  class Invalid : Expr() {
+    override fun <R> accept(visitor: Visitor<R> ): R {
+      return visitor.visitInvalidExpr(this);
     }
   }
 }

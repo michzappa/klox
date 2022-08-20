@@ -13,10 +13,11 @@ fun defineAst(outputDir: String, baseName: String, types: List<String>) {
     writer.println("  abstract fun <R> accept(visitor: Visitor<R>): R")
     defineVisitor(writer, baseName, types)
     for (type in types) {
+        val info = type.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        println(info)
         val className =
-            type.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].trim { it <= ' ' }
-        val fields =
-            type.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1].trim { it <= ' ' }
+            info[0].trim { it <= ' ' }
+        val fields = if (info.size > 1) (info[1].trim { it <= ' ' }) else ""
         defineType(writer, baseName, className, fields)
     }
     writer.println("}")
@@ -73,7 +74,10 @@ fun main(args: Array<String>) {
             "Binary   : Expr left, Token operator, Expr right",
             "Grouping : Expr expression",
             "Literal  : Any? value",
-            "Unary    : Token operator, Expr right"
+            "Unary    : Token operator, Expr right",
+            "Comma    : Expr left, Expr right",
+            "Ternary  : Expr cond, Expr left, Expr right",
+            "Invalid  :"
         )
     )
 }

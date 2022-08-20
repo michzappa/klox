@@ -1,5 +1,6 @@
 package klox
 
+import tool.AstPrinter
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.charset.Charset
@@ -14,9 +15,7 @@ class Klox {
         val bytes = Files.readAllBytes(Paths.get(path))
         run(String(bytes, Charset.defaultCharset()))
 
-        if (hadError) {
-            exitProcess(65)
-        }
+        if (hadError) exitProcess(65)
     }
 
     fun runPrompt() {
@@ -26,9 +25,12 @@ class Klox {
         while (true) {
             print("> ")
             val line = reader.readLine()
-            if (line.isNullOrEmpty()) {
-                break; }
-            run(line)
+            if (line.isNullOrEmpty()) break
+            try {
+                run(line)
+            } catch (_ : RuntimeException){
+                // just swallow the exception, keep the repl going
+            }
             hadError = false
         }
     }
@@ -36,15 +38,26 @@ class Klox {
     private fun run(source: String) {
         val scanner = Scanner(source)
         val tokens = scanner.scanTokens()
+        val parser = Parser(tokens)
+        val expression = parser.parse()
 
-       for(token in tokens){
-            println(token)
-        }
+        // stop if there was a syntax error
+        if (hadError) return
+
+        println(AstPrinter().print(expression!!))
     }
 
     companion object {
         fun error(line: Int, message: String) {
             report(line, "", message)
+        }
+
+        fun error(token: Token, message: String) {
+            if (token.type === TokenType.EOF) {
+                report(token.line, " at end", message)
+            } else {
+                report(token.line, " at '" + token.lexeme + "'", message)
+            }
         }
 
         private fun report(line: Int, where: String, message: String) {
