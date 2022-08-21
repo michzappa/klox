@@ -2,17 +2,37 @@ package klox
 
 import klox.TokenType.*
 
-class Interpreter : Expr.Visitor<Any?> {
-    fun interpret(expression: Expr?) {
+class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
+    private var environment = Environment()
+
+    fun interpret(statements: List<Stmt>) {
         try {
-            val value = evaluate(expression!!)
-            println(stringify(value))
+            for (statement in statements){
+                execute(statement)
+            }
         } catch (error: RuntimeError) {
             Klox.runtimeError(error)
         }
     }
-    private fun evaluate(expr: Expr): Any? {
+
+    fun evaluate(expr: Expr): Any? {
         return expr.accept(this)
+    }
+
+    private fun execute(stmt: Stmt) {
+        stmt.accept(this)
+    }
+
+    private fun executeBlock(statements: List<Stmt>, environment: Environment?) {
+        val previous = this.environment
+        try {
+            this.environment = environment!!
+            for (statement in statements) {
+                execute(statement)
+            }
+        } finally {
+            this.environment = previous
+        }
     }
 
     private fun isTruthy(obj: Any?): Boolean {
@@ -137,6 +157,16 @@ class Interpreter : Expr.Visitor<Any?> {
         })
     }
 
+    override fun visitVariableExpr(expr: Expr.Variable): Any? {
+        return environment.get(expr.name)
+    }
+
+    override fun visitAssignExpr(expr: Expr.Assign): Any? {
+        val value = evaluate(expr.value)
+        environment.assign(expr.name, value)
+        return value
+    }
+
     override fun visitCommaExpr(expr: Expr.Comma): Any? {
         // evaluate the left, and throw it away
         evaluate(expr.left)
@@ -155,5 +185,35 @@ class Interpreter : Expr.Visitor<Any?> {
 
     override fun visitInvalidExpr(expr: Expr.Invalid): Any? {
         throw RuntimeException("Don't evaluate an invalid expression.")
+    }
+
+    override fun visitExpressionStmt(stmt: Stmt.Expression) {
+        evaluate(stmt.expression)
+        return
+    }
+
+    override fun visitPrintStmt(stmt: Stmt.Print)  {
+        val value = evaluate(stmt.expression)
+        println(stringify(value))
+        return
+    }
+
+    override fun visitVarStmt(stmt: Stmt.Var) {
+        val assignment = stmt.initializer !is Expr.Invalid
+        val value = if (assignment) {
+             evaluate(stmt.initializer)
+        } else {
+            null
+        }
+
+        environment.define(stmt.name.lexeme, value, assignment)
+    }
+
+    override fun visitBlockStmt(stmt: Stmt.Block) {
+        executeBlock(stmt.statements, Environment(environment))
+    }
+
+    override fun visitInvalidStmt(stmt: Stmt.Invalid) {
+        throw RuntimeException("Don't evaluate an invalid statement.")
     }
 }

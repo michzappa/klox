@@ -1,6 +1,5 @@
 package klox
 
-import tool.AstPrinter
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.charset.Charset
@@ -14,7 +13,7 @@ class Klox {
         run(String(bytes, Charset.defaultCharset()))
 
         if (hadError) exitProcess(65)
-        if (hadRuntimeError) exitProcess(70);
+        if (hadRuntimeError) exitProcess(70)
     }
 
     fun runPrompt() {
@@ -26,7 +25,7 @@ class Klox {
             val line = reader.readLine()
             if (line.isNullOrEmpty()) break
             try {
-                run(line)
+                run(line, true)
             } catch (_ : RuntimeException){
                 // just swallow the exception, keep the repl going
             }
@@ -34,22 +33,33 @@ class Klox {
         }
     }
 
-    private fun run(source: String) {
+    private fun run(source: String, repl: Boolean = false) {
         val scanner = Scanner(source)
         val tokens = scanner.scanTokens()
         val parser = Parser(tokens)
-        val expression = parser.parse()
+        // allow expressions in the repl
+        if (repl && (tokens[tokens.lastIndex - 1].type != TokenType.SEMICOLON)){
+            val expr = parser.parseExpression()
+
+            // stop if there was a syntax error
+            if (hadError) return
+
+            println(interpreter.evaluate(expr))
+        }
+
+        val statements = parser.parse()
 
         // stop if there was a syntax error
         if (hadError) return
 
-        interpreter.interpret(expression)
+        interpreter.interpret(statements)
     }
 
     companion object {
         val interpreter = Interpreter()
         var hadError = false
         var hadRuntimeError = false
+
         fun error(line: Int, message: String) {
             report(line, "", message)
         }

@@ -29,6 +29,14 @@ class RPNPrinter : Expr.Visitor<String?> {
         return "${print(expr.right)} ${expr.operator.lexeme}"
     }
 
+    override fun visitVariableExpr(expr: Expr.Variable): String? {
+        TODO("Not yet implemented")
+    }
+
+    override fun visitAssignExpr(expr: Expr.Assign): String? {
+        TODO("Not yet implemented")
+    }
+
     override fun visitCommaExpr(expr: Expr.Comma): String? {
         TODO("Not yet implemented")
     }

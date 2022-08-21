@@ -29,6 +29,14 @@ class AstPrinter : Expr.Visitor<String?> {
         return parenthesize(expr.operator.lexeme, expr.right)
     }
 
+    override fun visitVariableExpr(expr: Expr.Variable): String? {
+        TODO("Not yet implemented")
+    }
+
+    override fun visitAssignExpr(expr: Expr.Assign): String? {
+        TODO("Not yet implemented")
+    }
+
     override fun visitCommaExpr(expr: Expr.Comma): String {
         return "(${print(expr.left)}, ${print(expr.right)})"
     }

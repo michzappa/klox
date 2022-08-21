@@ -2,21 +2,86 @@ package klox
 
 import klox.TokenType.*
 
-class Parser(val tokens: List<Token>) {
+class Parser(private val tokens: List<Token>) {
     private class ParseError : RuntimeException()
 
     private var current: Int = 0
 
-    fun parse(): Expr? {
+    fun parse(): List<Stmt> {
+        val statements = ArrayList<Stmt>()
+        while (!isAtEnd()){
+            statements.add(parseDeclaration())
+        }
+
+        return statements
+    }
+
+    fun parseExpression(): Expr {
+        return parseComma()
+    }
+
+    private fun parseDeclaration(): Stmt {
         return try {
-            parseExpression()
-        } catch (error: ParseError) {
-            null
+            if (match(VAR)) parseVarDeclaration()
+            else parseStatement()
+        } catch (error : ParseError){
+            synchronize()
+            Stmt.Invalid()
         }
     }
 
-    private fun parseExpression(): Expr {
-        return parseComma()
+    private fun parseStatement(): Stmt {
+        return if (match(PRINT)) parsePrintStatement()
+        else if (match(LEFT_BRACE)) return Stmt.Block(parseBlock())
+        else parseExpressionStatement()
+    }
+
+    private fun parsePrintStatement(): Stmt {
+        val value = parseExpression()
+        consume(SEMICOLON, "Expect ';' after value.")
+        return Stmt.Print(value)
+    }
+
+    private fun parseVarDeclaration(): Stmt {
+        val name = consume(IDENTIFIER, "Expect variable name.")
+
+        var initializer: Expr = Expr.Invalid()
+        if (match(EQUAL)) {
+            initializer = parseExpression()
+        }
+
+        consume(SEMICOLON, "Expect ';' after variable declaration.")
+        return Stmt.Var(name, initializer)
+
+    }
+
+    private fun parseExpressionStatement(): Stmt {
+        val expr = parseExpression()
+        consume(SEMICOLON, "Expect ';' after expression.")
+        return Stmt.Expression(expr)
+    }
+
+    private fun parseBlock(): List<Stmt> {
+        val statements = mutableListOf<Stmt>()
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(parseDeclaration())
+        }
+        consume(RIGHT_BRACE, "Expect '}' after block.")
+        return statements
+    }
+
+    private fun parseAssignment(): Expr {
+        val expr = parseEquality()
+        if (match(EQUAL)) {
+            val equals = previous()
+            val value = parseAssignment()
+            if (expr is Expr.Variable) {
+                val name = expr.name
+                return Expr.Assign(name, value)
+            }
+            error(equals, "Invalid assignment target.")
+        }
+        return expr
     }
 
     private fun parseComma(): Expr {
@@ -30,7 +95,7 @@ class Parser(val tokens: List<Token>) {
     }
 
     private fun parseTernary(): Expr {
-        val expr = parseEquality()
+        val expr = parseAssignment()
 
         if (match(QUESTION)){
             val left = parseExpression()
@@ -95,6 +160,7 @@ class Parser(val tokens: List<Token>) {
         else if (match(TRUE)) return Expr.Literal(true)
         else if (match(NIL)) return Expr.Literal(null)
         else if (match(NUMBER, STRING)) return Expr.Literal(previous().literal)
+        else if (match(IDENTIFIER)) return Expr.Variable(previous())
         else if (match(LEFT_PAREN)) {
             val expr = parseExpression()
             consume(RIGHT_PAREN, "Expect ')' after expression.")
@@ -118,7 +184,7 @@ class Parser(val tokens: List<Token>) {
         }
         else if (match(SLASH, STAR)) {
             error(previous(), "Missing left-hand operand.")
-            parseFactor();
+            parseFactor()
             return Expr.Invalid()
         }
         throw error(peek(), "Expect expression.")
