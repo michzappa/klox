@@ -1,6 +1,8 @@
 package klox
 
-class Environment(private var enclosing: Environment? = null) {
+class Environment(private val enclosing: Environment?) {
+    constructor() : this(null)
+
     // name, (value, assigned)
     private val values = mutableMapOf<String, Pair<Any?, Boolean>>()
 
@@ -12,7 +14,7 @@ class Environment(private var enclosing: Environment? = null) {
                 throw RuntimeError(name, "Unassigned variable '${name.lexeme}'.")
             }
         } else {
-            if (enclosing != null) return enclosing!!.get(name)
+            if (enclosing != null) return enclosing.get(name)
             throw RuntimeError(name, "Undefined variable '${name.lexeme}'.")
         }
     }
@@ -20,12 +22,11 @@ class Environment(private var enclosing: Environment? = null) {
     fun assign(name: Token, value: Any?) {
         if (values.containsKey(name.lexeme)) {
             values[name.lexeme] = Pair(value, true)
-            return
         } else if (enclosing != null) {
-            enclosing!!.assign(name, value)
+            enclosing.assign(name, value)
+        } else {
+            throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.")
         }
-
-        throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.")
     }
 
     fun define(name: String, value: Any?, assign: Boolean = false) {

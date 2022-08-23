@@ -160,6 +160,7 @@ class Scanner(private val source: String) {
     companion object {
         val keywords = hashMapOf(
             "and" to AND,
+            "break" to BREAK,
             "class" to CLASS,
             "else" to ELSE,
             "false" to FALSE,

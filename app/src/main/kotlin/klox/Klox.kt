@@ -26,8 +26,8 @@ class Klox {
             if (line.isNullOrEmpty()) break
             try {
                 run(line, true)
-            } catch (_: RuntimeException) {
-                // just swallow the exception, keep the repl going
+            } catch (e: RuntimeError) {
+                error(e.token, e.message)
             }
             hadError = false
         }

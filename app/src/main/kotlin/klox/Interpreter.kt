@@ -146,6 +146,18 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         return expr.value
     }
 
+    override fun visitLogicalExpr(expr: Expr.Logical): Any? {
+        val left = evaluate(expr.left)
+
+        if (expr.operator.type == OR) {
+            if (isTruthy(left)) return left
+        } else {
+            if (!isTruthy(left)) return left
+        }
+
+        return evaluate(expr.right)
+    }
+
     override fun visitUnaryExpr(expr: Expr.Unary): Any? {
         val right = evaluate(expr.right)
 
@@ -178,7 +190,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         return evaluate(expr.right)
     }
 
-    override fun visitTernaryExpr(expr: Expr.Ternary): Any? {
+    override fun visitConditionalExpr(expr: Expr.Conditional): Any? {
         return if (isTruthy(evaluate(expr.cond))) {
             evaluate(expr.left)
         } else {
@@ -193,6 +205,14 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     override fun visitExpressionStmt(stmt: Stmt.Expression) {
         evaluate(stmt.expression)
         return
+    }
+
+    override fun visitIfStmt(stmt: Stmt.If) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.thenBranch)
+        } else if (stmt.elseBranch !is Stmt.Invalid) {
+            execute(stmt.elseBranch)
+        }
     }
 
     override fun visitPrintStmt(stmt: Stmt.Print) {
@@ -212,8 +232,24 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         environment.define(stmt.name.lexeme, value, assignment)
     }
 
+    override fun visitWhileStmt(stmt: Stmt.While) {
+        try {
+            while (isTruthy(evaluate(stmt.condition))) {
+                execute(stmt.body)
+            }
+        } catch (e: BreakException) {
+            // swallow exception, jump out of the loop
+        }
+    }
+
     override fun visitBlockStmt(stmt: Stmt.Block) {
         executeBlock(stmt.statements, Environment(environment))
+    }
+
+    private class BreakException : RuntimeException()
+
+    override fun visitBreakStmt(stmt: Stmt.Break) {
+        throw BreakException()
     }
 
     override fun visitInvalidStmt(stmt: Stmt.Invalid) {

@@ -25,6 +25,10 @@ class AstPrinter : Expr.Visitor<String?> {
         return expr.value.toString()
     }
 
+    override fun visitLogicalExpr(expr: Expr.Logical): String? {
+        TODO("Not yet implemented")
+    }
+
     override fun visitUnaryExpr(expr: Expr.Unary): String {
         return parenthesize(expr.operator.lexeme, expr.right)
     }
@@ -41,7 +45,7 @@ class AstPrinter : Expr.Visitor<String?> {
         return "(${print(expr.left)}, ${print(expr.right)})"
     }
 
-    override fun visitTernaryExpr(expr: Expr.Ternary): String {
+    override fun visitConditionalExpr(expr: Expr.Conditional): String {
         return "(if ${print(expr.cond)} then ${print(expr.left)} else ${print(expr.right)})"
     }
 
@@ -69,8 +73,8 @@ fun main() {
             Expr.Grouping(Expr.Literal(45.67))
         ),
         Expr.Comma(
-            Expr.Assign(Token(TokenType.IDENTIFIER, "hello", null, 1),Expr.Literal("hello")),
-            Expr.Ternary(Expr.Literal(true), Expr.Literal(4), Expr.Literal(1))
+            Expr.Assign(Token(TokenType.IDENTIFIER, "hello", null, 1), Expr.Literal("hello")),
+            Expr.Conditional(Expr.Literal(true), Expr.Literal(4), Expr.Literal(1))
         )
     )
     println(AstPrinter().print(expression))

@@ -1,11 +1,13 @@
 package klox
 
+import klox.Expr.Logical
 import klox.TokenType.*
 
 class Parser(private val tokens: List<Token>) {
     private class ParseError : RuntimeException()
 
-    private var current: Int = 0
+    private var current = 0
+    private var loopDepth = 0
 
     fun parse(): List<Stmt> {
         val statements = ArrayList<Stmt>()
@@ -31,9 +33,76 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun parseStatement(): Stmt {
-        return if (match(PRINT)) parsePrintStatement()
+        return if (match(BREAK)) return parseBreakStatement()
+        else if (match(FOR)) return parseForStatement()
+        else if (match(IF)) parseIfStatement()
+        else if (match(WHILE)) parseWhileStatement()
+        else if (match(PRINT)) parsePrintStatement()
         else if (match(LEFT_BRACE)) return Stmt.Block(parseBlock())
         else parseExpressionStatement()
+    }
+
+    private fun parseBreakStatement(): Stmt {
+        if (loopDepth == 0) {
+            error(previous(), "'break' cannot be used outside of a loop.")
+        }
+        consume(SEMICOLON, "Expect ';' after 'break'.")
+        return Stmt.Break()
+    }
+
+    private fun parseForStatement(): Stmt {
+        consume(LEFT_PAREN, "Expect '(' after 'for'.")
+        val initializer = if (match(SEMICOLON)) {
+            Stmt.Invalid()
+        } else if (match(VAR)) {
+            parseVarDeclaration()
+        } else {
+            parseExpressionStatement()
+        }
+
+        val condition = if (!check(SEMICOLON)) {
+            parseExpression()
+        } else {
+            Expr.Literal(true)
+        }
+        consume(SEMICOLON, "Expect ';' after loop condition.")
+
+        val increment = if (!check(RIGHT_PAREN)) {
+            parseExpression()
+        } else {
+            Expr.Invalid()
+        }
+        consume(RIGHT_PAREN, "Expect ')' after for clauses.")
+
+        try {
+            loopDepth += 1
+
+            val body = if (increment is Expr.Invalid) {
+                parseStatement()
+            } else {
+                Stmt.Block(listOf(parseStatement(), Stmt.Expression(increment)))
+            }
+
+            return if (initializer is Stmt.Invalid) {
+                Stmt.While(condition, body)
+            } else {
+                Stmt.Block(listOf(initializer, Stmt.While(condition, body)))
+            }
+        } finally {
+            loopDepth -= 1
+        }
+    }
+
+    private fun parseIfStatement(): Stmt {
+        consume(LEFT_PAREN, "Expect '(' after 'if'.")
+        val condition = parseExpression()
+        consume(RIGHT_PAREN, "Expect ')' after if condition.")
+        val thenBranch = parseStatement()
+        val elseBranch = if (match(ELSE)) {
+            parseStatement()
+        } else Stmt.Invalid()
+
+        return Stmt.If(condition, thenBranch, elseBranch)
     }
 
     private fun parsePrintStatement(): Stmt {
@@ -54,6 +123,18 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Var(name, initializer)
     }
 
+    private fun parseWhileStatement(): Stmt {
+        consume(LEFT_PAREN, "Expect '(' after 'while'.")
+        val condition: Expr = parseExpression()
+        consume(RIGHT_PAREN, "Expect ')' after condition.")
+        try {
+            loopDepth += 1
+            return Stmt.While(condition, parseStatement())
+        } finally {
+            loopDepth -= 1
+        }
+    }
+
     private fun parseExpressionStatement(): Stmt {
         val expr = parseExpression()
         consume(SEMICOLON, "Expect ';' after expression.")
@@ -70,7 +151,8 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun parseAssignment(): Expr {
-        val expr = parseEquality()
+        val expr = parseOr()
+
         if (match(EQUAL)) {
             val equals = previous()
             val value = parseAssignment()
@@ -80,6 +162,28 @@ class Parser(private val tokens: List<Token>) {
             }
             error(equals, "Invalid assignment target.")
         }
+        return expr
+    }
+
+    private fun parseOr(): Expr {
+        var expr: Expr = parseAnd()
+        while (match(OR)) {
+            val operator = previous()
+            val right: Expr = parseAnd()
+            expr = Logical(expr, operator, right)
+        }
+        return expr
+    }
+
+    private fun parseAnd(): Expr {
+        var expr = parseEquality()
+
+        while (match(AND)) {
+            val operator = previous()
+            val right = parseEquality()
+            expr = Logical(expr, operator, right)
+        }
+
         return expr
     }
 
@@ -100,7 +204,7 @@ class Parser(private val tokens: List<Token>) {
             val left = parseExpression()
             consume(COLON, "Ternary operator is of the form <cond> ? <expr1> : <expr2>")
             val right = parseTernary()
-            return Expr.Ternary(expr, left, right)
+            return Expr.Conditional(expr, left, right)
         }
 
         return expr

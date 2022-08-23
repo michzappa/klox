@@ -25,6 +25,10 @@ class RPNPrinter : Expr.Visitor<String?> {
         return expr.value.toString()
     }
 
+    override fun visitLogicalExpr(expr: Expr.Logical): String? {
+        TODO("Not yet implemented")
+    }
+
     override fun visitUnaryExpr(expr: Expr.Unary): String {
         return "${print(expr.right)} ${expr.operator.lexeme}"
     }
@@ -41,7 +45,7 @@ class RPNPrinter : Expr.Visitor<String?> {
         TODO("Not yet implemented")
     }
 
-    override fun visitTernaryExpr(expr: Expr.Ternary): String? {
+    override fun visitConditionalExpr(expr: Expr.Conditional): String? {
         TODO("Not yet implemented")
     }
 
@@ -58,8 +62,8 @@ fun main() {
             Expr.Grouping(Expr.Literal(45.67))
         ),
         Expr.Comma(
-            Expr.Assign(Token(TokenType.IDENTIFIER, "hello", null, 1),Expr.Literal("hello")),
-            Expr.Ternary(Expr.Literal(true), Expr.Literal(4), Expr.Literal(1))
+            Expr.Assign(Token(TokenType.IDENTIFIER, "hello", null, 1), Expr.Literal("hello")),
+            Expr.Conditional(Expr.Literal(true), Expr.Literal(4), Expr.Literal(1))
         )
     )
     println(RPNPrinter().print(expression))
