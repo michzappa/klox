@@ -9,7 +9,7 @@ class Parser(private val tokens: List<Token>) {
 
     fun parse(): List<Stmt> {
         val statements = ArrayList<Stmt>()
-        while (!isAtEnd()){
+        while (!isAtEnd()) {
             statements.add(parseDeclaration())
         }
 
@@ -24,7 +24,7 @@ class Parser(private val tokens: List<Token>) {
         return try {
             if (match(VAR)) parseVarDeclaration()
             else parseStatement()
-        } catch (error : ParseError){
+        } catch (error: ParseError) {
             synchronize()
             Stmt.Invalid()
         }
@@ -52,7 +52,6 @@ class Parser(private val tokens: List<Token>) {
 
         consume(SEMICOLON, "Expect ';' after variable declaration.")
         return Stmt.Var(name, initializer)
-
     }
 
     private fun parseExpressionStatement(): Stmt {
@@ -97,7 +96,7 @@ class Parser(private val tokens: List<Token>) {
     private fun parseTernary(): Expr {
         val expr = parseAssignment()
 
-        if (match(QUESTION)){
+        if (match(QUESTION)) {
             val left = parseExpression()
             consume(COLON, "Ternary operator is of the form <cond> ? <expr1> : <expr2>")
             val right = parseTernary()
@@ -171,18 +170,15 @@ class Parser(private val tokens: List<Token>) {
             error(previous(), "Missing left-hand operand.")
             parseEquality()
             return Expr.Invalid()
-        }
-        else if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+        } else if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
             error(previous(), "Missing left-hand operand.")
             parseComparison()
             return Expr.Invalid()
-        }
-        else if (match(PLUS)) {
+        } else if (match(PLUS)) {
             error(previous(), "Missing left-hand operand.")
             parseTerm()
             return Expr.Invalid()
-        }
-        else if (match(SLASH, STAR)) {
+        } else if (match(SLASH, STAR)) {
             error(previous(), "Missing left-hand operand.")
             parseFactor()
             return Expr.Invalid()

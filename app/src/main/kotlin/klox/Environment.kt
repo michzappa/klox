@@ -1,14 +1,14 @@
 package klox
 
-class Environment(var enclosing: Environment? = null) {
+class Environment(private var enclosing: Environment? = null) {
     // name, (value, assigned)
     private val values = mutableMapOf<String, Pair<Any?, Boolean>>()
 
     fun get(name: Token): Any? {
         if (values.containsKey(name.lexeme)) {
-            if(values[name.lexeme]!!.second) {
+            if (values[name.lexeme]!!.second) {
                 return values[name.lexeme]!!.first
-            }else{
+            } else {
                 throw RuntimeError(name, "Unassigned variable '${name.lexeme}'.")
             }
         } else {

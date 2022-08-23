@@ -139,7 +139,7 @@ class Scanner(private val source: String) {
     private fun match(expected: Char): Boolean {
         return if (isAtEnd() || source[current] != expected) {
             false
-        }else{
+        } else {
             current++
             true
         }

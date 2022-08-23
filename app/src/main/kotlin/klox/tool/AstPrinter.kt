@@ -1,4 +1,4 @@
-package tool
+package klox.tool
 
 import klox.Expr
 import klox.Token
@@ -10,11 +10,11 @@ class AstPrinter : Expr.Visitor<String?> {
         return expr.accept(this)
     }
 
-    override fun visitBinaryExpr(expr: Expr.Binary): String? {
+    override fun visitBinaryExpr(expr: Expr.Binary): String {
         return parenthesize(expr.operator.lexeme, expr.left, expr.right)
     }
 
-    override fun visitGroupingExpr(expr: Expr.Grouping): String? {
+    override fun visitGroupingExpr(expr: Expr.Grouping): String {
         return parenthesize("group", expr.expression)
     }
 
@@ -29,12 +29,12 @@ class AstPrinter : Expr.Visitor<String?> {
         return parenthesize(expr.operator.lexeme, expr.right)
     }
 
-    override fun visitVariableExpr(expr: Expr.Variable): String? {
-        TODO("Not yet implemented")
+    override fun visitVariableExpr(expr: Expr.Variable): String {
+        return "(var  ${expr.name.lexeme})"
     }
 
-    override fun visitAssignExpr(expr: Expr.Assign): String? {
-        TODO("Not yet implemented")
+    override fun visitAssignExpr(expr: Expr.Assign): String {
+        return parenthesize("set ${expr.name.lexeme}", expr.value)
     }
 
     override fun visitCommaExpr(expr: Expr.Comma): String {
@@ -45,7 +45,7 @@ class AstPrinter : Expr.Visitor<String?> {
         return "(if ${print(expr.cond)} then ${print(expr.left)} else ${print(expr.right)})"
     }
 
-    override fun visitInvalidExpr(expr: Expr.Invalid): String? {
+    override fun visitInvalidExpr(expr: Expr.Invalid): String {
         return "(invalid expression)"
     }
 
@@ -61,11 +61,17 @@ class AstPrinter : Expr.Visitor<String?> {
     }
 }
 
-fun main(args: Array<String>) {
-    val expression: Expr = Expr.Binary(
-        Expr.Unary(Token(TokenType.MINUS, "-", null, 1), Expr.Literal(123)),
-        Token(TokenType.STAR, "*", null, 1),
-        Expr.Grouping(Expr.Literal(45.67))
+fun main() {
+    val expression: Expr = Expr.Comma(
+        Expr.Binary(
+            Expr.Unary(Token(TokenType.MINUS, "-", null, 1), Expr.Literal(123)),
+            Token(TokenType.STAR, "*", null, 1),
+            Expr.Grouping(Expr.Literal(45.67))
+        ),
+        Expr.Comma(
+            Expr.Assign(Token(TokenType.IDENTIFIER, "hello", null, 1),Expr.Literal("hello")),
+            Expr.Ternary(Expr.Literal(true), Expr.Literal(4), Expr.Literal(1))
+        )
     )
     println(AstPrinter().print(expression))
 }

@@ -7,7 +7,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     fun interpret(statements: List<Stmt>) {
         try {
-            for (statement in statements){
+            for (statement in statements) {
                 execute(statement)
             }
         } catch (error: RuntimeError) {
@@ -44,8 +44,8 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     private fun isEqual(a: Any?, b: Any?): Boolean {
-        return (if (a == null && b == null)  true
-        else  if (a == null) false
+        return (if (a == null && b == null) true
+        else if (a == null) false
         else a == b)
     }
 
@@ -103,27 +103,30 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 (left as Double) - (right as Double)
             }
             PLUS -> {
-                if (left is Double && right is Double){
+                if (left is Double && right is Double) {
                     left + right
-                } else if (left is String && right is String){
+                } else if (left is String && right is String) {
                     left + right
                 }
-//                This ain't javascript
-//                else if (left is String && right is Double) {
-//                    left + stringify(right)
-//                } else if  (left is Double && right is String) {
-//                    stringify(left) + right
-//                }
+                // This ain't javascript
+                // else if (left is String && right is Double) {
+                //     left + stringify(right)
+                // } else if  (left is Double && right is String) {
+                //     stringify(left) + right
+                // }
 
                 else {
-                  throw RuntimeError(expr.operator, "Operands must be two numbers or two strings, this ain't javascript.")
+                    throw RuntimeError(
+                        expr.operator,
+                        "Operands must be two numbers or two strings, this ain't javascript."
+                    )
                 }
             }
             SLASH -> {
                 checkNumberOperands(expr.operator, left, right)
                 if (right == 0.0) {
                     throw RuntimeError(expr.operator, "Cannot divide by zero.")
-                }else {
+                } else {
                     (left as Double) / (right as Double)
                 }
             }
@@ -147,13 +150,13 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         val right = evaluate(expr.right)
 
         return (when (expr.operator.type) {
-                    BANG -> !isTruthy(right)
-                    MINUS -> {
-                        checkNumberOperand(expr.operator, right)
-                        -(right as Double)
-                    }
-                    // unreachable
-                    else -> null
+            BANG -> !isTruthy(right)
+            MINUS -> {
+                checkNumberOperand(expr.operator, right)
+                -(right as Double)
+            }
+            // unreachable
+            else -> null
         })
     }
 
@@ -176,9 +179,9 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitTernaryExpr(expr: Expr.Ternary): Any? {
-        return if (isTruthy(evaluate(expr.cond))){
+        return if (isTruthy(evaluate(expr.cond))) {
             evaluate(expr.left)
-        } else{
+        } else {
             evaluate(expr.right)
         }
     }
@@ -192,7 +195,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         return
     }
 
-    override fun visitPrintStmt(stmt: Stmt.Print)  {
+    override fun visitPrintStmt(stmt: Stmt.Print) {
         val value = evaluate(stmt.expression)
         println(stringify(value))
         return
@@ -201,7 +204,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     override fun visitVarStmt(stmt: Stmt.Var) {
         val assignment = stmt.initializer !is Expr.Invalid
         val value = if (assignment) {
-             evaluate(stmt.initializer)
+            evaluate(stmt.initializer)
         } else {
             null
         }

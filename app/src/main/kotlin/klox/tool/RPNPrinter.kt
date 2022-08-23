@@ -1,4 +1,4 @@
-package tool
+package klox.tool
 
 import klox.Expr
 import klox.Token
@@ -51,10 +51,16 @@ class RPNPrinter : Expr.Visitor<String?> {
 }
 
 fun main() {
-    val expression: Expr = Expr.Binary(
-        Expr.Unary(Token(TokenType.MINUS, "-", null, 1), Expr.Literal(123)),
-        Token(TokenType.STAR, "*", null, 1),
-        Expr.Literal(45.67)
+    val expression: Expr = Expr.Comma(
+        Expr.Binary(
+            Expr.Unary(Token(TokenType.MINUS, "-", null, 1), Expr.Literal(123)),
+            Token(TokenType.STAR, "*", null, 1),
+            Expr.Grouping(Expr.Literal(45.67))
+        ),
+        Expr.Comma(
+            Expr.Assign(Token(TokenType.IDENTIFIER, "hello", null, 1),Expr.Literal("hello")),
+            Expr.Ternary(Expr.Literal(true), Expr.Literal(4), Expr.Literal(1))
+        )
     )
     println(RPNPrinter().print(expression))
 }

@@ -26,19 +26,19 @@ class Klox {
             if (line.isNullOrEmpty()) break
             try {
                 run(line, true)
-            } catch (_ : RuntimeException){
+            } catch (_: RuntimeException) {
                 // just swallow the exception, keep the repl going
             }
             hadError = false
         }
     }
 
-    private fun run(source: String, repl: Boolean = false) {
+    fun run(source: String, repl: Boolean = false) {
         val scanner = Scanner(source)
         val tokens = scanner.scanTokens()
         val parser = Parser(tokens)
         // allow expressions in the repl
-        if (repl && (tokens[tokens.lastIndex - 1].type != TokenType.SEMICOLON)){
+        if (repl && (tokens[tokens.lastIndex - 1].type != TokenType.SEMICOLON)) {
             val expr = parser.parseExpression()
 
             // stop if there was a syntax error
