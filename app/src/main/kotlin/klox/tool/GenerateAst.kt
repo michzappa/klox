@@ -47,7 +47,7 @@ fun defineType(writer: PrintWriter, baseName: String, className: String, fieldLi
     writer.println("  class $className${makeInitializer(fields)} : $baseName() {")
     // visitor pattern
     writer.println("    override fun <R> accept(visitor: Visitor<R> ): R {")
-    writer.println("      return visitor.visit$className$baseName(this);")
+    writer.println("      return visitor.visit$className$baseName(this)")
     writer.println("    }")
     writer.println("  }")
 }
@@ -71,10 +71,12 @@ fun main(args: Array<String>) {
         outputDir, "Expr", listOf(
             "Assign       : Token name, Expr value",
             "Binary       : Expr left, Token operator, Expr right",
+            "Call         : Expr callee, Token paren, List<Expr> arguments",
             "Comma        : Expr left, Expr right",
             "Conditional  : Expr cond, Expr left, Expr right",
             "Grouping     : Expr expression",
-            "Invalid      :",
+            "Invalid      : Token token",
+            "Lambda       : List<Token> params, List<Stmt> body",
             "Literal      : Any? value",
             "Logical      : Expr left, Token operator, Expr right",
             "Unary        : Token operator, Expr right",
@@ -86,9 +88,11 @@ fun main(args: Array<String>) {
             "Block      : List<Stmt> statements",
             "Break      : ",
             "Expression : Expr expression",
+            "Function   : Token name, List<Token> params, List<Stmt> body",
             "If         : Expr condition, Stmt thenBranch, Stmt elseBranch",
-            "Invalid    :",
+            "Invalid    : Token token",
             "Print      : Expr expression",
+            "Return     : Token keyword, Expr value",
             "Var        : Token name, Expr initializer",
             "While      : Expr condition, Stmt body"
         )

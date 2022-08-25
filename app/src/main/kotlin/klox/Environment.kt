@@ -29,7 +29,7 @@ class Environment(private val enclosing: Environment?) {
         }
     }
 
-    fun define(name: String, value: Any?, assign: Boolean = false) {
+    fun define(name: String, value: Any?, assign: Boolean) {
         values[name] = Pair(value, assign)
     }
 }

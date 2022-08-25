@@ -24,21 +24,23 @@ class Parser(private val tokens: List<Token>) {
 
     private fun parseDeclaration(): Stmt {
         return try {
-            if (match(VAR)) parseVarDeclaration()
+            if (checkNext(IDENTIFIER) && match(FUN)) parseFunction("function")
+            else if (match(VAR)) parseVarDeclaration()
             else parseStatement()
         } catch (error: ParseError) {
             synchronize()
-            Stmt.Invalid()
+            Stmt.Invalid(tokens[current])
         }
     }
 
     private fun parseStatement(): Stmt {
-        return if (match(BREAK)) return parseBreakStatement()
-        else if (match(FOR)) return parseForStatement()
+        return if (match(BREAK)) parseBreakStatement()
+        else if (match(FOR)) parseForStatement()
         else if (match(IF)) parseIfStatement()
-        else if (match(WHILE)) parseWhileStatement()
+        else if (match(LEFT_BRACE)) Stmt.Block(parseBlock())
         else if (match(PRINT)) parsePrintStatement()
-        else if (match(LEFT_BRACE)) return Stmt.Block(parseBlock())
+        else if (match(RETURN)) parseReturnStatement()
+        else if (match(WHILE)) parseWhileStatement()
         else parseExpressionStatement()
     }
 
@@ -53,7 +55,7 @@ class Parser(private val tokens: List<Token>) {
     private fun parseForStatement(): Stmt {
         consume(LEFT_PAREN, "Expect '(' after 'for'.")
         val initializer = if (match(SEMICOLON)) {
-            Stmt.Invalid()
+            Stmt.Invalid(tokens[current])
         } else if (match(VAR)) {
             parseVarDeclaration()
         } else {
@@ -70,7 +72,7 @@ class Parser(private val tokens: List<Token>) {
         val increment = if (!check(RIGHT_PAREN)) {
             parseExpression()
         } else {
-            Expr.Invalid()
+            Expr.Invalid(tokens[current])
         }
         consume(RIGHT_PAREN, "Expect ')' after for clauses.")
 
@@ -100,7 +102,7 @@ class Parser(private val tokens: List<Token>) {
         val thenBranch = parseStatement()
         val elseBranch = if (match(ELSE)) {
             parseStatement()
-        } else Stmt.Invalid()
+        } else Stmt.Invalid(tokens[current])
 
         return Stmt.If(condition, thenBranch, elseBranch)
     }
@@ -114,13 +116,24 @@ class Parser(private val tokens: List<Token>) {
     private fun parseVarDeclaration(): Stmt {
         val name = consume(IDENTIFIER, "Expect variable name.")
 
-        var initializer: Expr = Expr.Invalid()
+        var initializer: Expr = Expr.Invalid(tokens[current])
         if (match(EQUAL)) {
             initializer = parseExpression()
         }
 
         consume(SEMICOLON, "Expect ';' after variable declaration.")
         return Stmt.Var(name, initializer)
+    }
+
+    private fun parseReturnStatement(): Stmt {
+        val keyword = previous()
+        val value = if (!check(SEMICOLON)) {
+            parseExpression()
+        } else {
+            Expr.Literal(null)
+        }
+        consume(SEMICOLON, "Expect ';' after return value.")
+        return Stmt.Return(keyword, value)
     }
 
     private fun parseWhileStatement(): Stmt {
@@ -139,6 +152,25 @@ class Parser(private val tokens: List<Token>) {
         val expr = parseExpression()
         consume(SEMICOLON, "Expect ';' after expression.")
         return Stmt.Expression(expr)
+    }
+
+    private fun parseFunction(kind: String): Stmt.Function {
+        val name = consume(IDENTIFIER, "Expect $kind name.")
+        consume(LEFT_PAREN, "Expect '(' after $kind name.")
+        val parameters: MutableList<Token> = ArrayList()
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (parameters.size >= 255) {
+                    error(peek(), "Can't have more than 255 parameters.")
+                } else {
+                    parameters.add(consume(IDENTIFIER, "Expect parameter name."))
+                }
+            } while (match(COMMA))
+        }
+        consume(RIGHT_PAREN, "Expect ')' after parameters.")
+        consume(LEFT_BRACE, "Expect '{' before $kind body.")
+
+        return Stmt.Function(name, parameters, parseBlock())
     }
 
     private fun parseBlock(): List<Stmt> {
@@ -188,13 +220,35 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun parseComma(): Expr {
-        var expr = parseTernary()
+        var expr = parseLambda()
 
         while (match(COMMA)) {
-            expr = Expr.Comma(expr, parseTernary())
+            expr = Expr.Comma(expr, parseLambda())
         }
 
         return expr
+    }
+
+    private fun parseLambda(): Expr {
+        if (match(FUN)) {
+            consume(LEFT_PAREN, "Expect '(' after 'fun'")
+            val parameters: MutableList<Token> = ArrayList()
+            if (!check(RIGHT_PAREN)) {
+                do {
+                    if (parameters.size >= 255) {
+                        error(peek(), "Can't have more than 255 parameters.")
+                    } else {
+                        parameters.add(consume(IDENTIFIER, "Expect parameter name."))
+                    }
+                } while (match(COMMA))
+            }
+            consume(RIGHT_PAREN, "Expect ')' after parameters.")
+            consume(LEFT_BRACE, "Expect '{' before lambda body.")
+
+            return Expr.Lambda(parameters, parseBlock())
+        } else {
+            return parseTernary()
+        }
     }
 
     private fun parseTernary(): Expr {
@@ -254,8 +308,39 @@ class Parser(private val tokens: List<Token>) {
         return if (match(BANG, MINUS)) {
             Expr.Unary(previous(), parseUnary())
         } else {
-            parsePrimary()
+            parseCall()
         }
+    }
+
+    private fun finishCall(callee: Expr): Expr {
+        val arguments: MutableList<Expr> = ArrayList()
+
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (arguments.size >= 255) {
+                    error(peek(), "Can't have more than 255 arguments.")
+                }
+                arguments.add(parseLambda())
+            } while (match(COMMA))
+        }
+
+        val paren = consume(RIGHT_PAREN, "Expect ')' after arguments.")
+
+        return Expr.Call(callee, paren, arguments)
+    }
+
+    private fun parseCall(): Expr {
+        var expr = parsePrimary()
+
+        while (true) {
+            if (match(LEFT_PAREN)) {
+                expr = finishCall(expr)
+            } else {
+                break
+            }
+        }
+
+        return expr
     }
 
     private fun parsePrimary(): Expr {
@@ -273,19 +358,19 @@ class Parser(private val tokens: List<Token>) {
         else if (match(BANG_EQUAL, EQUAL_EQUAL)) {
             error(previous(), "Missing left-hand operand.")
             parseEquality()
-            return Expr.Invalid()
+            return Expr.Invalid(tokens[current])
         } else if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
             error(previous(), "Missing left-hand operand.")
             parseComparison()
-            return Expr.Invalid()
+            return Expr.Invalid(tokens[current])
         } else if (match(PLUS)) {
             error(previous(), "Missing left-hand operand.")
             parseTerm()
-            return Expr.Invalid()
+            return Expr.Invalid(tokens[current])
         } else if (match(SLASH, STAR)) {
             error(previous(), "Missing left-hand operand.")
             parseFactor()
-            return Expr.Invalid()
+            return Expr.Invalid(tokens[current])
         }
         throw error(peek(), "Expect expression.")
     }
@@ -309,6 +394,10 @@ class Parser(private val tokens: List<Token>) {
         return if (isAtEnd()) false else peek().type === type
     }
 
+    private fun checkNext(type: TokenType): Boolean {
+        return if (isAtEnd()) false else peekNext().type === type
+    }
+
     private fun advance(): Token {
         if (!isAtEnd()) current++
         return previous()
@@ -320,6 +409,10 @@ class Parser(private val tokens: List<Token>) {
 
     private fun peek(): Token {
         return tokens[current]
+    }
+
+    private fun peekNext(): Token {
+        return tokens[current + 1]
     }
 
     private fun previous(): Token {

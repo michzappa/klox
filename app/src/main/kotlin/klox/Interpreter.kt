@@ -3,7 +3,24 @@ package klox
 import klox.TokenType.*
 
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
-    private var environment = Environment()
+    private val globals = Environment()
+    private var environment = globals
+
+    init {
+        globals.define("clock", object : Callable {
+            override fun arity(): Int {
+                return 0
+            }
+
+            override fun call(interpreter: Interpreter, arguments: List<Any?>): Any {
+                return System.currentTimeMillis() / 1000.0
+            }
+
+            override fun toString(): String {
+                return "<native fn>"
+            }
+        }, true)
+    }
 
     fun interpret(statements: List<Stmt>) {
         try {
@@ -23,7 +40,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         stmt.accept(this)
     }
 
-    private fun executeBlock(statements: List<Stmt>, environment: Environment?) {
+    fun executeBlock(statements: List<Stmt>, environment: Environment?) {
         val previous = this.environment
         try {
             this.environment = environment!!
@@ -138,6 +155,23 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         }
     }
 
+    override fun visitCallExpr(expr: Expr.Call): Any? {
+        val callee = evaluate(expr.callee)
+
+        val arguments: MutableList<Any?> = ArrayList()
+        for (argument in expr.arguments) {
+            arguments.add(evaluate(argument))
+        }
+
+        if (callee !is Callable) {
+            throw RuntimeError(expr.paren, "Can only call functions and classes.")
+        } else if (arguments.size != callee.arity()) {
+            throw RuntimeError(expr.paren, "Expected ${callee.arity()} arguments but got ${arguments.size}.")
+        }
+
+        return callee.call(this, arguments)
+    }
+
     override fun visitGroupingExpr(expr: Expr.Grouping): Any? {
         return evaluate(expr.expression)
     }
@@ -198,6 +232,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         }
     }
 
+    override fun visitLambdaExpr(expr: Expr.Lambda): Lambda {
+        return Lambda(environment, expr)
+    }
+
     override fun visitInvalidExpr(expr: Expr.Invalid): Any? {
         throw RuntimeException("Don't evaluate an invalid expression.")
     }
@@ -205,6 +243,11 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     override fun visitExpressionStmt(stmt: Stmt.Expression) {
         evaluate(stmt.expression)
         return
+    }
+
+    override fun visitFunctionStmt(stmt: Stmt.Function) {
+        val function = Function(environment, stmt)
+        environment.define(stmt.name.lexeme, function, true)
     }
 
     override fun visitIfStmt(stmt: Stmt.If) {
@@ -219,6 +262,11 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         val value = evaluate(stmt.expression)
         println(stringify(value))
         return
+    }
+
+    override fun visitReturnStmt(stmt: Stmt.Return) {
+        val value = evaluate(stmt.value)
+        throw Return(value)
     }
 
     override fun visitVarStmt(stmt: Stmt.Var) {
@@ -253,6 +301,6 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitInvalidStmt(stmt: Stmt.Invalid) {
-        throw RuntimeException("Don't evaluate an invalid statement.")
+        throw RuntimeError(stmt.token, "Don't evaluate an invalid statement.")
     }
 }

@@ -37,8 +37,10 @@ class Klox {
         val scanner = Scanner(source)
         val tokens = scanner.scanTokens()
         val parser = Parser(tokens)
-        // allow expressions in the repl
-        if (repl && (tokens[tokens.lastIndex - 1].type != TokenType.SEMICOLON)) {
+        // allow expressions in the repl, since statements end with either ';' or '}',
+        // though lambdas end with '}' too. boolean hack.
+        if (repl && tokens[tokens.lastIndex - 1].type != TokenType.SEMICOLON &&
+            (tokens[tokens.lastIndex - 1].type != TokenType.RIGHT_BRACE || tokens[0].type == TokenType.FUN)) {
             val expr = parser.parseExpression()
 
             // stop if there was a syntax error

@@ -58,6 +58,21 @@ class KloxTest {
         testOutput("4\ntrue\n8")
     }
 
+    @Test
+    fun testFunPrint() {
+        klox.run(
+            "fun sayHi(first, last) { print \"Hi, \" + first + \" \" + last + \"!\"; }\n" +
+                    "sayHi(\"Dear\", \"Reader\");"
+        )
+        testOutput("Hi, Dear Reader!")
+    }
+
+    @Test
+    fun testLambdas() {
+        klox.run("var f = fun(a, b){ return a + b; }; print(f(4, 3));")
+        testOutput("7")
+    }
+
     private fun testOutput(expected: String) {
         assertEquals(expected, outputStreamCaptor.toString().trim())
     }
