@@ -41,3 +41,7 @@ application {
     mainClass.set("klox.KloxKt")
     applicationName = "klox"
 }
+
+tasks.getByName<JavaExec>("run") {
+    standardInput = System.`in`
+}
