@@ -1,2 +1,0 @@
-var four = fun () {return 4;};
-print(four());
