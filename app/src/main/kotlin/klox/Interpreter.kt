@@ -5,6 +5,7 @@ import klox.TokenType.*
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     private val globals = Environment()
     private var environment = globals
+    private val locals: MutableMap<Expr, Int> = mutableMapOf()
 
     init {
         globals.define("clock", object : Callable {
@@ -38,6 +39,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     private fun execute(stmt: Stmt) {
         stmt.accept(this)
+    }
+
+    fun resolve(expr: Expr, depth: Int) {
+        locals.put(expr, depth)
     }
 
     fun executeBlock(statements: List<Stmt>, environment: Environment?) {
@@ -90,6 +95,15 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     private fun checkNumberOperands(operator: Token, left: Any?, right: Any?) {
         if (left is Double && right is Double) return
         throw RuntimeError(operator, "Operands must be numbers.")
+    }
+
+    private fun lookUpVariable(name: Token, expr: Expr): Any? {
+        val distance = locals[expr]
+        return if (distance != null) {
+            environment.getAt(distance, name.lexeme)
+        } else {
+            globals.get(name)
+        }
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): Any? {
@@ -207,12 +221,17 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Any? {
-        return environment.get(expr.name)
+        return lookUpVariable(expr.name, expr)
     }
 
     override fun visitAssignExpr(expr: Expr.Assign): Any? {
         val value = evaluate(expr.value)
-        environment.assign(expr.name, value)
+        val distance = locals.get(expr)
+        if (distance != null) {
+            environment.assignAt(distance, expr.name, value)
+        } else {
+            globals.assign(expr.name, value)
+        }
         return value
     }
 

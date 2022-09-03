@@ -73,7 +73,13 @@ class KloxTest {
         testOutput("7")
     }
 
-    private fun testOutput(expected: String) {
-        assertEquals(expected, outputStreamCaptor.toString().trim())
+    @Test
+    fun testLexicalScope() {
+        klox.run("var a = 1; { fun showA() { print a; } showA(); var a  = 2; showA(); }")
+        testOutput("1\n1")
+    }
+
+    private fun testOutput(expectedOut: String) {
+        assertEquals(expectedOut, outputStreamCaptor.toString().trim())
     }
 }
