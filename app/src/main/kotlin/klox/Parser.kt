@@ -3,8 +3,8 @@ package klox
 import klox.Expr.Logical
 import klox.TokenType.*
 
-class Parser(private val tokens: List<Token>) {
-    private class ParseError : RuntimeException()
+class Parser(private val tokens: List<Token>, private val createError: Boolean = true) {
+    class ParseError : RuntimeException()
 
     private var current = 0
     private var loopDepth = 0
@@ -371,8 +371,9 @@ class Parser(private val tokens: List<Token>) {
             error(previous(), "Missing left-hand operand.")
             parseFactor()
             return Expr.Invalid(tokens[current])
+        } else {
+            throw error(peek(), "Expect expression.")
         }
-        throw error(peek(), "Expect expression.")
     }
 
     private fun match(vararg types: TokenType): Boolean {
@@ -420,7 +421,10 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun error(token: Token, message: String): ParseError {
-        Klox.error(token, message)
+        if (createError) {
+            Klox.hadError = true
+            Klox.error(token, message)
+        }
         return ParseError()
     }
 

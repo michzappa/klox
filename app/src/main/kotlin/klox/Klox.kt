@@ -36,20 +36,20 @@ class Klox {
     fun run(source: String, repl: Boolean = false) {
         val scanner = Scanner(source)
         val tokens = scanner.scanTokens()
-        val parser = Parser(tokens)
-        // allow expressions in the repl, since statements end with either ';' or '}',
-        // though lambdas end with '}' too. boolean hack.
-        if (repl && tokens[tokens.lastIndex - 1].type != TokenType.SEMICOLON &&
-            (tokens[tokens.lastIndex - 1].type != TokenType.RIGHT_BRACE || tokens[0].type == TokenType.FUN)
-        ) {
-            val expr = parser.parseExpression()
 
-            // stop if there was a syntax error
-            if (hadError) return
+        // allow expressions in the repl
+        if (repl) {
+            try{
+                val expr = Parser(tokens, false).parseExpression()
 
-            println(interpreter.evaluate(expr))
+                println(interpreter.evaluate(expr))
+                return
+            }catch(e: Parser.ParseError){
+                // no nothing, try to parse as a statement
+            }
         }
 
+        val parser = Parser(tokens)
         val statements = parser.parse()
 
         // stop if there was a syntax error
