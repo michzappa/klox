@@ -1,11 +1,11 @@
 package klox
 
-class Function(private val closure: Environment, private val declaration: Stmt.Function) : Callable {
+class Function(private val closure: Environment, private val declaration: Stmt.Function, private val token: Token) : Callable {
     override fun arity(): Int {
         return declaration.params.size
     }
 
-    override fun call(interpreter: Interpreter, arguments: List<Any?>): Any? {
+    override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any? {
         val environment = Environment(closure)
         for (i in 0 until arity()) {
             environment.define(declaration.params[i].lexeme, arguments[i], true)

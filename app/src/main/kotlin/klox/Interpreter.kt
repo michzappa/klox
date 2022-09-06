@@ -8,19 +8,110 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     private val locals: MutableMap<Expr, Int> = mutableMapOf()
 
     init {
-        globals.define("clock", object : Callable {
-            override fun arity(): Int {
-                return 0
-            }
+        globals.define(
+            "clock",
+            object : Callable {
+                override fun arity(): Int {
+                    return 0
+                }
 
-            override fun call(interpreter: Interpreter, arguments: List<Any?>): Any {
-                return System.currentTimeMillis() / 1000.0
-            }
+                override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
+                    return System.currentTimeMillis() / 1000.0
+                }
 
-            override fun toString(): String {
-                return "<native fn>"
-            }
-        }, true)
+                override fun toString(): String {
+                    return "<native fn>"
+                }
+            },
+            true
+        )
+        globals.define(
+            "cons",
+            object : Callable {
+                override fun arity(): Int {
+                    return 2
+                }
+
+                override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
+                    if (arguments[1] is List<Any?>) {
+                        val l: MutableList<Any?> = mutableListOf(arguments[0])
+                        l.addAll(arguments[1] as List<Any?>)
+                        return l
+                    } else {
+                        throw RuntimeError(token, "probably a type error")
+                    }
+                }
+
+                override fun toString(): String {
+                    return "<native fn>"
+                }
+            },
+            true
+        )
+        globals.define(
+            "length",
+            object : Callable {
+                override fun arity(): Int {
+                    return 1
+                }
+
+                override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
+                    if (arguments[0] is List<Any?>) {
+                        return (arguments[0] as List<Any?>).size
+                    } else {
+                        throw RuntimeError(token, "probably a type error")
+                    }
+                }
+
+                override fun toString(): String {
+                    return "<native fn>"
+                }
+            },
+            true
+        )
+        globals.define(
+            "head",
+            object : Callable {
+                override fun arity(): Int {
+                    return 1
+                }
+
+                override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any? {
+                    if (arguments[0] is List<Any?>) {
+                        val l = arguments[0]
+                        return if ((l as List<Any?>).size == 0) { null } else { l.first() }
+                    } else {
+                        throw RuntimeError(token, "probably a type error")
+                    }
+                }
+
+                override fun toString(): String {
+                    return "<native fn>"
+                }
+            },
+            true
+        )
+        globals.define(
+            "tail",
+            object : Callable {
+                override fun arity(): Int {
+                    return 1
+                }
+
+                override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any? {
+                    if (arguments[0] is List<Any?>) {
+                        return (arguments[0] as List<Any?>).drop(1)
+                    } else {
+                        throw RuntimeError(token, "probably a type error")
+                    }
+                }
+
+                override fun toString(): String {
+                    return "<native fn>"
+                }
+            },
+            true
+        )
     }
 
     fun interpret(statements: List<Stmt>) {
@@ -66,9 +157,11 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     private fun isEqual(a: Any?, b: Any?): Boolean {
-        return (if (a == null && b == null) true
-        else if (a == null) false
-        else a == b)
+        return (
+            if (a == null && b == null) true
+            else if (a == null) false
+            else a == b
+            )
     }
 
     private fun stringify(obj: Any?): String {
@@ -187,11 +280,16 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             throw RuntimeError(expr.paren, "Expected ${callee.arity()} arguments but got ${arguments.size}.")
         }
 
-        return callee.call(this, arguments)
+        return callee.call(this, arguments, expr.token)
     }
 
     override fun visitGroupingExpr(expr: Expr.Grouping): Any? {
         return evaluate(expr.expression)
+    }
+
+    override fun visitKloxListExpr(expr: Expr.KloxList): Any? {
+        val values: List<Any?> = expr.values.map { v -> evaluate(v) }
+        return values
     }
 
     override fun visitLiteralExpr(expr: Expr.Literal): Any? {
@@ -213,15 +311,17 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     override fun visitUnaryExpr(expr: Expr.Unary): Any? {
         val right = evaluate(expr.right)
 
-        return (when (expr.operator.type) {
-            BANG -> !isTruthy(right)
-            MINUS -> {
-                checkNumberOperand(expr.operator, right)
-                -(right as Double)
+        return (
+            when (expr.operator.type) {
+                BANG -> !isTruthy(right)
+                MINUS -> {
+                    checkNumberOperand(expr.operator, right)
+                    -(right as Double)
+                }
+                // unreachable
+                else -> null
             }
-            // unreachable
-            else -> null
-        })
+            )
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Any? {
@@ -269,7 +369,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitFunctionStmt(stmt: Stmt.Function) {
-        val function = Function(environment, stmt)
+        val function = Function(environment, stmt, stmt.name)
         environment.define(stmt.name.lexeme, function, true)
     }
 

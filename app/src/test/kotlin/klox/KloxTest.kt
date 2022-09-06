@@ -62,7 +62,7 @@ class KloxTest {
     fun testFunPrint() {
         klox.run(
             "fun sayHi(first, last) { print \"Hi, \" + first + \" \" + last + \"!\"; }\n" +
-                    "sayHi(\"Dear\", \"Reader\");"
+                "sayHi(\"Dear\", \"Reader\");"
         )
         testOutput("Hi, Dear Reader!")
     }
@@ -77,6 +77,12 @@ class KloxTest {
     fun testLexicalScope() {
         klox.run("var a = 1; { fun showA() { print a; } showA(); var a  = 2; showA(); }")
         testOutput("1\n1")
+    }
+
+    @Test
+    fun testLists() {
+        klox.run("var l = []; print(length(l)); print(l); print(l = cons(1, l)); print(l = cons(2, l)); print(length(l)); print(head(l)); print(l = tail(l)); print(l);")
+        testOutput("0\n[]\n[1.0]\n[2.0, 1.0]\n2\n2\n[1.0]\n[1.0]")
     }
 
     private fun testOutput(expectedOut: String) {

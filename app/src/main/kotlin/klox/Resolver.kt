@@ -142,6 +142,12 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         throw RuntimeException("Don't resolve an invalid expression.")
     }
 
+    override fun visitKloxListExpr(expr: Expr.KloxList) {
+        for (e in expr.values) {
+            resolve(e)
+        }
+    }
+
     override fun visitLambdaExpr(expr: Expr.Lambda) {
         resolveFunction(expr, FunctionType.FUNCTION)
     }

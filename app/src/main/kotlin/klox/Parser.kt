@@ -65,7 +65,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         val condition = if (!check(SEMICOLON)) {
             parseExpression()
         } else {
-            Expr.Literal(true)
+            Expr.Literal(true, tokens[current])
         }
         consume(SEMICOLON, "Expect ';' after loop condition.")
 
@@ -130,7 +130,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         val value = if (!check(SEMICOLON)) {
             parseExpression()
         } else {
-            Expr.Literal(null)
+            Expr.Literal(null, tokens[current])
         }
         consume(SEMICOLON, "Expect ';' after return value.")
         return Stmt.Return(keyword, value)
@@ -190,7 +190,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
             val value = parseAssignment()
             if (expr is Expr.Variable) {
                 val name = expr.name
-                return Expr.Assign(name, value)
+                return Expr.Assign(name, value, tokens[current - 1])
             }
             error(equals, "Invalid assignment target.")
         }
@@ -223,14 +223,25 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         var expr = parseLambda()
 
         while (match(COMMA)) {
-            expr = Expr.Comma(expr, parseLambda())
+            expr = Expr.Comma(expr, parseLambda(), tokens[current - 1])
         }
 
         return expr
     }
 
+    private fun parseKloxList(): List<Expr> {
+        var values: MutableList<Expr> = ArrayList()
+        if (!check(RIGHT_BRACKET)) {
+            do {
+                values.add(parseLambda())
+            } while (match(COMMA))
+        }
+        return values
+    }
+
     private fun parseLambda(): Expr {
         if (match(FUN)) {
+            val funToken = tokens[current]
             consume(LEFT_PAREN, "Expect '(' after 'fun'")
             val parameters: MutableList<Token> = ArrayList()
             if (!check(RIGHT_PAREN)) {
@@ -245,7 +256,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
             consume(RIGHT_PAREN, "Expect ')' after parameters.")
             consume(LEFT_BRACE, "Expect '{' before lambda body.")
 
-            return Expr.Lambda(parameters, parseBlock())
+            return Expr.Lambda(parameters, parseBlock(), funToken)
         } else {
             return parseTernary()
         }
@@ -255,10 +266,11 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         val expr = parseAssignment()
 
         if (match(QUESTION)) {
+            val questionToken = tokens[current]
             val left = parseExpression()
             consume(COLON, "Ternary operator is of the form <cond> ? <expr1> : <expr2>")
             val right = parseTernary()
-            return Expr.Conditional(expr, left, right)
+            return Expr.Conditional(expr, left, right, questionToken)
         }
 
         return expr
@@ -312,7 +324,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         }
     }
 
-    private fun finishCall(callee: Expr): Expr {
+    private fun finishCall(callee: Expr, token: Token): Expr {
         val arguments: MutableList<Expr> = ArrayList()
 
         if (!check(RIGHT_PAREN)) {
@@ -326,7 +338,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
 
         val paren = consume(RIGHT_PAREN, "Expect ')' after arguments.")
 
-        return Expr.Call(callee, paren, arguments)
+        return Expr.Call(callee, paren, arguments, token)
     }
 
     private fun parseCall(): Expr {
@@ -334,7 +346,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
 
         while (true) {
             if (match(LEFT_PAREN)) {
-                expr = finishCall(expr)
+                expr = finishCall(expr, expr.token)
             } else {
                 break
             }
@@ -344,15 +356,19 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
     }
 
     private fun parsePrimary(): Expr {
-        if (match(FALSE)) return Expr.Literal(false)
-        else if (match(TRUE)) return Expr.Literal(true)
-        else if (match(NIL)) return Expr.Literal(null)
-        else if (match(NUMBER, STRING)) return Expr.Literal(previous().literal)
+        if (match(FALSE)) return Expr.Literal(false, tokens[current - 1])
+        else if (match(TRUE)) return Expr.Literal(true, tokens[current - 1])
+        else if (match(NIL)) return Expr.Literal(null, tokens[current - 1])
+        else if (match(NUMBER, STRING)) return Expr.Literal(previous().literal, tokens[current - 1])
         else if (match(IDENTIFIER)) return Expr.Variable(previous())
         else if (match(LEFT_PAREN)) {
             val expr = parseExpression()
             consume(RIGHT_PAREN, "Expect ')' after expression.")
-            return Expr.Grouping(expr)
+            return Expr.Grouping(expr, tokens[current - 1])
+        } else if (match(LEFT_BRACKET)) {
+            val exprs = parseKloxList()
+            consume(RIGHT_BRACKET, "Expect ']' to close list.")
+            return Expr.KloxList(exprs, tokens[current - 1])
         }
         // better error messages for some invalid expressions
         else if (match(BANG_EQUAL, EQUAL_EQUAL)) {
