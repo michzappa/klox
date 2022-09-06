@@ -49,7 +49,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             true
         )
         globals.define(
-            "length",
+            "empty",
             object : Callable {
                 override fun arity(): Int {
                     return 1
@@ -57,7 +57,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
                     if (arguments[0] is List<Any?>) {
-                        return (arguments[0] as List<Any?>).size
+                        return (arguments[0] as List<Any?>).size == 0
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -70,7 +70,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             true
         )
         globals.define(
-            "head",
+            "first",
             object : Callable {
                 override fun arity(): Int {
                     return 1
@@ -92,7 +92,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             true
         )
         globals.define(
-            "tail",
+            "rest",
             object : Callable {
                 override fun arity(): Int {
                     return 1

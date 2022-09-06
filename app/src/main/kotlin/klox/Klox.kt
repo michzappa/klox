@@ -8,9 +8,14 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 class Klox {
+    val stdlib = String(
+        Files.readAllBytes(Paths.get(System.getProperty("user.dir") + "/stdlib.lox")),
+        Charset.defaultCharset()
+    )
+
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))
-        run(String(bytes, Charset.defaultCharset()))
+        run(stdlib + String(bytes, Charset.defaultCharset()))
 
         if (hadError) exitProcess(65)
         if (hadRuntimeError) exitProcess(70)
@@ -21,6 +26,7 @@ class Klox {
         val reader = BufferedReader(input)
 
         while (true) {
+            run(stdlib)
             print("> ")
             val line = reader.readLine()
             if (line.isNullOrEmpty()) break
@@ -39,12 +45,12 @@ class Klox {
 
         // allow expressions in the repl
         if (repl) {
-            try{
+            try {
                 val expr = Parser(tokens, false).parseExpression()
 
                 println(interpreter.evaluate(expr))
                 return
-            }catch(e: Parser.ParseError){
+            } catch (e: Parser.ParseError) {
                 // no nothing, try to parse as a statement
             }
         }
