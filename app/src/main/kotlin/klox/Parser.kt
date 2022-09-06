@@ -297,7 +297,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
     private fun parseFactor(): Expr {
         var expr = parseUnary()
 
-        while (match(SLASH, STAR)) {
+        while (match(SLASH, STAR, PERCENT)) {
             expr = Expr.Binary(expr, previous(), parseUnary())
         }
 

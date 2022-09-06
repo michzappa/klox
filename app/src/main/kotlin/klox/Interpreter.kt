@@ -165,6 +165,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 checkNumberOperands(expr.operator, left, right)
                 (left as Double) * (right as Double)
             }
+            PERCENT -> {
+                checkNumberOperands(expr.operator, left, right)
+                (left as Double) % (right as Double)
+            }
             else -> null
         }
     }
