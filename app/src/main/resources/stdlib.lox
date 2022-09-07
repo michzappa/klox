@@ -50,6 +50,18 @@ fun length(l) {
   }
 }
 
+fun last(l) {
+  if (empty(l)) {
+    return nil;
+  } else {
+    if (length(l) == 1) {
+      return first(l);
+    } else {
+      return last(rest(l));
+    }
+  }
+}
+
 fun append(l1, l2) {
   if (empty(l1)) {
     return l2;

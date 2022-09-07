@@ -17,6 +17,7 @@
       in {
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
+            clang-tools
             graalvm
             gradle
             inputs.gradle2nix.packages.${system}.default

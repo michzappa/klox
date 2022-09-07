@@ -8,10 +8,7 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 class Klox {
-    val stdlib = String(
-        Files.readAllBytes(Paths.get(System.getProperty("user.dir") + "/stdlib.lox")),
-        Charset.defaultCharset()
-    )
+    private val stdlib = javaClass.classLoader.getResource("stdlib.lox")!!.readText()
 
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))

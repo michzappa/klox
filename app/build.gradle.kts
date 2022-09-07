@@ -51,6 +51,9 @@ graalvmNative {
         named("main") {
             // Disable native toolchain checking
             buildArgs.add("-H:-CheckToolchain")
+            // Access to stdlib files (include all .lox files in the
+            // resources directory)
+            buildArgs.add("-H:IncludeResources=.*.lox")
             // Set executable name
             imageName.set("klox")
         }
