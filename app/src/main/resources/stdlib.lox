@@ -74,7 +74,7 @@ fun reverse(l) {
   if (empty(l)) {
     return l;
   } else {
-    return app(reverse(rest(l)), [first(l)]);
+    return append(reverse(rest(l)), [first(l)]);
   }
 }
 

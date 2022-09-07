@@ -16,6 +16,8 @@ class KloxTest {
 
     @Before
     fun setup() {
+        // pre-load std library
+        klox.run(javaClass.classLoader.getResource("stdlib.lox")!!.readText())
         System.setOut(PrintStream(outputStreamCaptor))
     }
 
@@ -81,7 +83,7 @@ class KloxTest {
 
     @Test
     fun testLists() {
-        klox.run("var l = []; print(length(l)); print(l); print(l = cons(1, l)); print(l = cons(2, l)); print(length(l)); print(head(l)); print(l = tail(l)); print(l);")
+        klox.run("var l = []; print(length(l)); print(l); print(l = cons(1, l)); print(l = cons(2, l)); print(length(l)); print(first(l)); print(l = rest(l)); print(l);")
         testOutput("0\n[]\n[1.0]\n[2.0, 1.0]\n2\n2\n[1.0]\n[1.0]")
     }
 
