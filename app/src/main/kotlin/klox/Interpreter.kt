@@ -37,6 +37,9 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                         val l: MutableList<Any?> = mutableListOf(arguments[0])
                         l.addAll(arguments[1] as List<Any?>)
                         return l
+                    } else if (arguments[1] is String) {
+                        val s = arguments[1] as String
+                        return arguments[0].toString() + s
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -58,6 +61,8 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
                     if (arguments[0] is List<Any?>) {
                         return (arguments[0] as List<Any?>).size == 0
+                    } else if (arguments[0] is String) {
+                        return (arguments[0] as String).length == 0
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -78,8 +83,11 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any? {
                     if (arguments[0] is List<Any?>) {
-                        val l = arguments[0]
-                        return if ((l as List<Any?>).size == 0) { null } else { l.first() }
+                        val l = (arguments[0] as List<Any?>)
+                        return if (l.size == 0) { null } else { l.first() }
+                    } else if (arguments[0] is String) {
+                        val s = (arguments[0] as String)
+                        return if (s.length == 0) { null } else { s.get(0) }
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -101,6 +109,9 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any? {
                     if (arguments[0] is List<Any?>) {
                         return (arguments[0] as List<Any?>).drop(1)
+                    } else if (arguments[0] is String) {
+                        val s = (arguments[0] as String)
+                        return if (s.length == 0) { null } else { s.substring(1) }
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
