@@ -1,13 +1,11 @@
 package klox
 
-class Klass(val name: String, private val methods: Map<String, Function>, metaclass: Klass?) :
+class Klass(val name: String, private val superclass: Klass?, private val methods: Map<String, Function>, metaclass: Klass?) :
     Callable, Instance(metaclass) {
     fun findMethod(name: String): Function? {
-        if (methods.containsKey(name)) {
-            return methods[name]
-        }
-
-        return null
+        return if (methods.containsKey(name)) {
+            methods[name]
+        } else superclass?.findMethod(name)
     }
 
     override fun arity(): Int {

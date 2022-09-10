@@ -36,6 +36,13 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
 
     private fun parseClassDeclaration(): Stmt {
         val name: Token = consume(IDENTIFIER, "Expect class name.")
+
+        var superclass: Expr.Variable? = null
+        if (match(LESS)) {
+            consume(IDENTIFIER, "Expect superclass name.")
+            superclass = Expr.Variable(previous())
+        }
+
         consume(LEFT_BRACE, "Expect '{' before class body.")
 
         val methods: MutableList<Stmt.Function> = ArrayList()
@@ -51,7 +58,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
 
         consume(RIGHT_BRACE, "Expect '}' after class body.")
 
-        return Stmt.Class(name, methods, staticMethods)
+        return Stmt.Class(name, superclass,  methods, staticMethods)
     }
 
     private fun parseStatement(): Stmt {
@@ -181,7 +188,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         var isGetter = true
 
         // getter "methods" have no parameters
-        if(kind != ("method") || check(LEFT_PAREN)) {
+        if (kind != ("method") || check(LEFT_PAREN)) {
             isGetter = false
             consume(LEFT_PAREN, "Expect '(' after $kind name.")
             if (!check(RIGHT_PAREN)) {
@@ -392,6 +399,12 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         else if (match(TRUE)) return Expr.Literal(true, tokens[current - 1])
         else if (match(NIL)) return Expr.Literal(null, tokens[current - 1])
         else if (match(NUMBER, STRING)) return Expr.Literal(previous().literal, tokens[current - 1])
+        else if (match(SUPER)) {
+            val keyword = previous()
+            consume(DOT, "Expect '.' after 'super'.")
+            val method = consume(IDENTIFIER, "Expect superclass method name.")
+            return Expr.Super(keyword, method)
+        }
         else if (match(THIS)) return Expr.This(previous())
         else if (match(IDENTIFIER)) return Expr.Variable(previous())
         else if (match(LEFT_PAREN)) {

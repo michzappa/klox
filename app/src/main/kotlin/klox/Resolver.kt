@@ -4,7 +4,7 @@ import java.util.*
 
 class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
     private enum class ClassType {
-        NONE, CLASS
+        NONE, CLASS, SUBCLASS
     }
 
     private enum class FunctionType {
@@ -62,7 +62,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         currentFunction = type
 
         beginScope()
-        if (!function.isGetter){
+        if (!function.isGetter) {
             for (param in function.params) {
                 declare(param)
                 define(param)
@@ -175,6 +175,15 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         resolve(expr.obj)
     }
 
+    override fun visitSuperExpr(expr: Expr.Super) {
+        if (currentClass == ClassType.NONE) {
+            Klox.error(expr.keyword, "Can't use 'super' outside of a class.");
+        } else if (currentClass != ClassType.SUBCLASS) {
+            Klox.error(expr.keyword, "Can't use 'super' in a class with no superclass.");
+        }
+        resolveLocal(expr, expr.keyword)
+    }
+
     override fun visitThisExpr(expr: Expr.This) {
         if (currentClass == ClassType.NONE) {
             Klox.error(expr.keyword, "Can't use 'this' outside of a class.")
@@ -216,6 +225,20 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
 
         declare(stmt.name)
 
+        if (stmt.superclass != null) {
+            if (stmt.name.lexeme == stmt.superclass.name.lexeme) {
+                Klox.error(stmt.superclass.name, "A class can't inherit from itself.")
+            } else {
+                currentClass = ClassType.SUBCLASS
+                resolve(stmt.superclass)
+            }
+        }
+
+        if (stmt.superclass != null) {
+            beginScope()
+            scopes.peek().put("super", ResolverInfo(defined = true, used = true))
+        }
+
         beginScope()
         scopes.peek()["this"] = ResolverInfo(defined = true, used = true)
 
@@ -238,6 +261,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         }
 
         endScope()
+
+        if (stmt.superclass != null) endScope()
+
         currentClass = enclosingClass
 
         define(stmt.name)

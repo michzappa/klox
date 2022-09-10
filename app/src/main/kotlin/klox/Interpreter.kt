@@ -310,7 +310,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         val obj = evaluate(expr.obj)
         if (obj is Instance) {
             var result = obj.get(expr.name)
-            if(result is Function && result.isGetter){
+            if (result is Function && result.isGetter) {
                 result = result.call(this, ArrayList(), expr.name)
             }
 
@@ -342,6 +342,15 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             obj.set(expr.name, value)
             return value
         }
+    }
+
+    override fun visitSuperExpr(expr: Expr.Super): Any {
+        val distance = locals[expr]
+        val superclass = environment.getAt(distance!!, "super") as Klass
+        val obj = environment.getAt(distance - 1, "this") as Instance
+        val method = superclass.findMethod(expr.method.lexeme)!!
+
+        return method.bind(obj)
     }
 
     override fun visitThisExpr(expr: Expr.This): Any? {
@@ -470,21 +479,41 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitClassStmt(stmt: Stmt.Class) {
+        val superclass: Klass? = if (stmt.superclass != null) {
+            val e = evaluate(stmt.superclass)
+            if (e !is Klass) {
+                throw RuntimeError(stmt.superclass.name, "Superclass must be a class.")
+            } else {
+                e
+            }
+        } else {
+            null
+        }
         environment.define(stmt.name.lexeme, null, false)
+
+        if (stmt.superclass != null) {
+            environment = Environment(environment)
+            environment.define("super", superclass, true)
+        }
 
         val staticMethods: MutableMap<String, Function> = HashMap()
         for (method in stmt.staticMethods) {
             staticMethods[method.name.lexeme] = Function(environment, method, false, method.name, false)
         }
 
-        val metaclass = Klass( "${stmt.name.lexeme} metaclass", staticMethods, null)
+        val metaclass = Klass("${stmt.name.lexeme} metaclass", null, staticMethods, null)
 
         val methods: MutableMap<String, Function> = HashMap()
         for (method in stmt.methods) {
             methods[method.name.lexeme] = Function(environment, method, method.name.lexeme == "init", method.name, method.isGetter)
         }
 
-        val klass = Klass(stmt.name.lexeme, methods, metaclass)
+        val klass = Klass(stmt.name.lexeme, superclass, methods, metaclass)
+
+        if (superclass != null) {
+            environment = environment.enclosing!!
+        }
+
         environment.assign(stmt.name, klass)
     }
 

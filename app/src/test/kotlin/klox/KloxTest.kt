@@ -102,6 +102,19 @@ class KloxTest {
         testOutput("50.265482448")
     }
 
+    @Test
+    fun testInheritance() {
+        klox.run("class A { hi() { print true; } } class B < A {} B().hi();")
+        testOutput("true")
+    }
+
+    @Test
+    fun testCallSuper() {
+        klox.run("class A { hi() { print true; } } class B < A { hi() { super.hi(); print false; } } B().hi();")
+        klox.run("class A { method() { print \"A\"; } } class B < A { method() { print \"B\"; } test() { super.method(); } } class C < B {} C().test();")
+        testOutput("true\nfalse\nA")
+    }
+
     private fun testOutput(expectedOut: String) {
         assertEquals(expectedOut, outputStreamCaptor.toString().trim())
     }

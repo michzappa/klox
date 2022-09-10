@@ -1,6 +1,6 @@
 package klox
 
-class Environment(private val enclosing: Environment?) {
+class Environment(val enclosing: Environment?) {
     constructor() : this(null)
 
     // name, (value, assigned)
