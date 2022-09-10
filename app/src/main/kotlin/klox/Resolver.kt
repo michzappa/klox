@@ -3,8 +3,12 @@ package klox
 import java.util.*
 
 class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
+    private enum class ClassType {
+        NONE, CLASS
+    }
+
     private enum class FunctionType {
-        NONE, FUNCTION
+        NONE, FUNCTION, INITIALIZER, METHOD
     }
 
     private class ResolverInfo(var defined: Boolean, var used: Boolean) {
@@ -19,6 +23,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
 
     // name, <defined, used>
     private val scopes = Stack<MutableMap<String, ResolverInfo>>()
+    private var currentClass: ClassType = ClassType.NONE
     private var currentFunction: FunctionType = FunctionType.NONE
 
     fun resolve(statements: List<Stmt>) {
@@ -57,9 +62,11 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         currentFunction = type
 
         beginScope()
-        for (param in function.params) {
-            declare(param)
-            define(param)
+        if (!function.isGetter){
+            for (param in function.params) {
+                declare(param)
+                define(param)
+            }
         }
         resolve(function.body)
         endScope()
@@ -67,9 +74,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         currentFunction = enclosingFunction
     }
 
-    private fun resolveFunction(function: Expr.Lambda, type: FunctionType) {
+    private fun resolveFunction(function: Expr.Lambda) {
         val enclosingFunction = currentFunction
-        currentFunction = type
+        currentFunction = FunctionType.FUNCTION
 
         beginScope()
         for (param in function.params) {
@@ -134,6 +141,10 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         resolve(expr.right)
     }
 
+    override fun visitGetExpr(expr: Expr.Get) {
+        resolve(expr.obj)
+    }
+
     override fun visitGroupingExpr(expr: Expr.Grouping) {
         resolve(expr.expression)
     }
@@ -149,7 +160,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     }
 
     override fun visitLambdaExpr(expr: Expr.Lambda) {
-        resolveFunction(expr, FunctionType.FUNCTION)
+        resolveFunction(expr)
     }
 
     override fun visitLiteralExpr(expr: Expr.Literal) {}
@@ -157,6 +168,19 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     override fun visitLogicalExpr(expr: Expr.Logical) {
         resolve(expr.left)
         resolve(expr.right)
+    }
+
+    override fun visitSetExpr(expr: Expr.Set) {
+        resolve(expr.value)
+        resolve(expr.obj)
+    }
+
+    override fun visitThisExpr(expr: Expr.This) {
+        if (currentClass == ClassType.NONE) {
+            Klox.error(expr.keyword, "Can't use 'this' outside of a class.")
+            return
+        }
+        resolveLocal(expr, expr.keyword)
     }
 
     override fun visitUnaryExpr(expr: Expr.Unary) {
@@ -185,6 +209,39 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     }
 
     override fun visitBreakStmt(stmt: Stmt.Break) {}
+
+    override fun visitClassStmt(stmt: Stmt.Class) {
+        val enclosingClass = currentClass
+        currentClass = ClassType.CLASS
+
+        declare(stmt.name)
+
+        beginScope()
+        scopes.peek()["this"] = ResolverInfo(defined = true, used = true)
+
+        for (method in stmt.methods) {
+            resolveFunction(
+                method,
+                if (method.name.lexeme == "init") {
+                    FunctionType.INITIALIZER
+                } else {
+                    FunctionType.METHOD
+                }
+            )
+        }
+
+        for (method in stmt.staticMethods) {
+            beginScope()
+            scopes.peek()["this"] = ResolverInfo(defined = true, used = true)
+            resolveFunction(method, FunctionType.METHOD)
+            endScope()
+        }
+
+        endScope()
+        currentClass = enclosingClass
+
+        define(stmt.name)
+    }
 
     override fun visitExpressionStmt(stmt: Stmt.Expression) {
         resolve(stmt.expression)
@@ -217,6 +274,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         }
 
         if (stmt.value !is Expr.Invalid) {
+            if (currentFunction == FunctionType.INITIALIZER) {
+                Klox.error(stmt.keyword, "Can't return a value from an initializer.")
+            }
             resolve(stmt.value)
         }
     }

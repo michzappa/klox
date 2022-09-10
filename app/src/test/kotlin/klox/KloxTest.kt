@@ -62,10 +62,7 @@ class KloxTest {
 
     @Test
     fun testFunPrint() {
-        klox.run(
-            "fun sayHi(first, last) { print \"Hi, \" + first + \" \" + last + \"!\"; }\n" +
-                "sayHi(\"Dear\", \"Reader\");"
-        )
+        klox.run("fun sayHi(first, last) { print \"Hi, \" + first + \" \" + last + \"!\"; }\nsayHi(\"Dear\", \"Reader\");")
         testOutput("Hi, Dear Reader!")
     }
 
@@ -85,6 +82,24 @@ class KloxTest {
     fun testLists() {
         klox.run("var l = []; print(length(l)); print(l); print(l = cons(1, l)); print(l = cons(2, l)); print(length(l)); print(first(l)); print(l = rest(l)); print(l);")
         testOutput("0\n[]\n[1.0]\n[2.0, 1.0]\n2\n2\n[1.0]\n[1.0]")
+    }
+
+    @Test
+    fun testClasses() {
+        klox.run("class T { init(){ this.test = true; } } print T; var t = T(); print t; print t.test;")
+        testOutput("T\nT instance\ntrue")
+    }
+
+    @Test
+    fun testStaticMethods() {
+        klox.run("class Test { class id2(n) { return n; } } print Test.id2(4);")
+        testOutput("4")
+    }
+
+    @Test
+    fun testGetters() {
+        klox.run("class Circle { init(radius) { this.radius = radius; } area { return 3.141592653 * this.radius * this.radius; } } print Circle(4).area;")
+        testOutput("50.265482448")
     }
 
     private fun testOutput(expectedOut: String) {

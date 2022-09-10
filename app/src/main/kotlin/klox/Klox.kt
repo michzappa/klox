@@ -12,7 +12,14 @@ class Klox {
 
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))
-        run(stdlib + String(bytes, Charset.defaultCharset()))
+
+        run(stdlib)
+        if (hadError) {
+            System.err.println("Error loading standard library.")
+            exitProcess(65)
+        }
+
+        run(String(bytes, Charset.defaultCharset()))
 
         if (hadError) exitProcess(65)
         if (hadRuntimeError) exitProcess(70)
@@ -24,6 +31,11 @@ class Klox {
 
         while (true) {
             run(stdlib)
+            if (hadError) {
+                System.err.println("Error loading standard library.")
+                exitProcess(65)
+            }
+
             print("> ")
             val line = reader.readLine()
             if (line.isNullOrEmpty()) break

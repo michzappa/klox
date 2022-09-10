@@ -33,13 +33,13 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 }
 
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
-                    if (arguments[1] is List<Any?>) {
+                    return if (arguments[1] is List<Any?>) {
                         val l: MutableList<Any?> = mutableListOf(arguments[0])
                         l.addAll(arguments[1] as List<Any?>)
-                        return l
+                        l
                     } else if (arguments[1] is String) {
                         val s = arguments[1] as String
-                        return arguments[0].toString() + s
+                        arguments[0].toString() + s
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -59,10 +59,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 }
 
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
-                    if (arguments[0] is List<Any?>) {
-                        return (arguments[0] as List<Any?>).size == 0
+                    return if (arguments[0] is List<Any?>) {
+                        (arguments[0] as List<Any?>).isEmpty()
                     } else if (arguments[0] is String) {
-                        return (arguments[0] as String).length == 0
+                        (arguments[0] as String).isEmpty()
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -82,12 +82,20 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 }
 
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any? {
-                    if (arguments[0] is List<Any?>) {
+                    return if (arguments[0] is List<Any?>) {
                         val l = (arguments[0] as List<Any?>)
-                        return if (l.size == 0) { null } else { l.first() }
+                        if (l.isEmpty()) {
+                            null
+                        } else {
+                            l.first()
+                        }
                     } else if (arguments[0] is String) {
                         val s = (arguments[0] as String)
-                        return if (s.length == 0) { null } else { s.get(0) }
+                        if (s.isEmpty()) {
+                            null
+                        } else {
+                            s[0]
+                        }
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -107,11 +115,15 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
                 }
 
                 override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any? {
-                    if (arguments[0] is List<Any?>) {
-                        return (arguments[0] as List<Any?>).drop(1)
+                    return if (arguments[0] is List<Any?>) {
+                        (arguments[0] as List<Any?>).drop(1)
                     } else if (arguments[0] is String) {
                         val s = (arguments[0] as String)
-                        return if (s.length == 0) { null } else { s.substring(1) }
+                        if (s.isEmpty()) {
+                            null
+                        } else {
+                            s.substring(1)
+                        }
                     } else {
                         throw RuntimeError(token, "probably a type error")
                     }
@@ -144,7 +156,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     fun resolve(expr: Expr, depth: Int) {
-        locals.put(expr, depth)
+        locals[expr] = depth
     }
 
     fun executeBlock(statements: List<Stmt>, environment: Environment?) {
@@ -294,17 +306,46 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         return callee.call(this, arguments, expr.token)
     }
 
+    override fun visitGetExpr(expr: Expr.Get): Any? {
+        val obj = evaluate(expr.obj)
+        if (obj is Instance) {
+            var result = obj.get(expr.name)
+            if(result is Function && result.isGetter){
+                result = result.call(this, ArrayList(), expr.name)
+            }
+
+            return result
+        }
+
+        throw RuntimeError(expr.name, "Only instances have properties.")
+    }
+
     override fun visitGroupingExpr(expr: Expr.Grouping): Any? {
         return evaluate(expr.expression)
     }
 
-    override fun visitKloxListExpr(expr: Expr.KloxList): Any? {
-        val values: List<Any?> = expr.values.map { v -> evaluate(v) }
-        return values
+    override fun visitKloxListExpr(expr: Expr.KloxList): Any {
+        return expr.values.map { v -> evaluate(v) }
     }
 
     override fun visitLiteralExpr(expr: Expr.Literal): Any? {
         return expr.value
+    }
+
+    override fun visitSetExpr(expr: Expr.Set): Any? {
+        val obj = evaluate(expr.obj)
+
+        if (obj !is Instance) {
+            throw RuntimeError(expr.name, "Only instances have fields.")
+        } else {
+            val value = evaluate(expr.value)
+            obj.set(expr.name, value)
+            return value
+        }
+    }
+
+    override fun visitThisExpr(expr: Expr.This): Any? {
+        return lookUpVariable(expr.keyword, expr)
     }
 
     override fun visitLogicalExpr(expr: Expr.Logical): Any? {
@@ -341,7 +382,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     override fun visitAssignExpr(expr: Expr.Assign): Any? {
         val value = evaluate(expr.value)
-        val distance = locals.get(expr)
+        val distance = locals[expr]
         if (distance != null) {
             environment.assignAt(distance, expr.name, value)
         } else {
@@ -380,7 +421,7 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitFunctionStmt(stmt: Stmt.Function) {
-        val function = Function(environment, stmt, stmt.name)
+        val function = Function(environment, stmt, false, stmt.name, stmt.isGetter)
         environment.define(stmt.name.lexeme, function, true)
     }
 
@@ -426,6 +467,25 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
     override fun visitBlockStmt(stmt: Stmt.Block) {
         executeBlock(stmt.statements, Environment(environment))
+    }
+
+    override fun visitClassStmt(stmt: Stmt.Class) {
+        environment.define(stmt.name.lexeme, null, false)
+
+        val staticMethods: MutableMap<String, Function> = HashMap()
+        for (method in stmt.staticMethods) {
+            staticMethods[method.name.lexeme] = Function(environment, method, false, method.name, false)
+        }
+
+        val metaclass = Klass( "${stmt.name.lexeme} metaclass", staticMethods, null)
+
+        val methods: MutableMap<String, Function> = HashMap()
+        for (method in stmt.methods) {
+            methods[method.name.lexeme] = Function(environment, method, method.name.lexeme == "init", method.name, method.isGetter)
+        }
+
+        val klass = Klass(stmt.name.lexeme, methods, metaclass)
+        environment.assign(stmt.name, klass)
     }
 
     private class BreakException : RuntimeException()

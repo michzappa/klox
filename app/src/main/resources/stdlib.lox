@@ -1,4 +1,21 @@
-fun id(x) { return x; }
+class Math {
+  class exp(b, p) {
+    var result = 1;
+    for (var i = 0; i < p; i = i + 1) {
+      result = result * b;
+    }
+
+    return result;
+  }
+
+  class square(n) {
+    return this.exp(n, 2);
+  }
+}
+
+fun id(x) {
+  return x;
+}
 
 fun fib(n) {
   var minus_two = 0;

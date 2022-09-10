@@ -149,13 +149,11 @@ class Scanner(private val source: String) {
     }
 
     private fun peek(): Char {
-        return (
-            if (isAtEnd()) {
-                '\u0000'
-            } else {
-                source[current]
-            }
-            )
+        return if (isAtEnd()) {
+            '\u0000'
+        } else {
+            source[current]
+        }
     }
 
     private fun peekNext(): Char {
