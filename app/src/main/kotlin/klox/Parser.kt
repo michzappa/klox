@@ -18,10 +18,6 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         return statements
     }
 
-    fun parseExpression(): Expr {
-        return parseComma()
-    }
-
     private fun parseDeclaration(): Stmt {
         return try {
             if (match(CLASS)) return parseClassDeclaration()
@@ -58,18 +54,64 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
 
         consume(RIGHT_BRACE, "Expect '}' after class body.")
 
-        return Stmt.Class(name, superclass,  methods, staticMethods)
+        return Stmt.Class(name, superclass, methods, staticMethods)
+    }
+
+    private fun parseFunction(kind: String): Stmt.Function {
+        val name = consume(IDENTIFIER, "Expect $kind name.")
+        val parameters: MutableList<Token> = ArrayList()
+        var isGetter = true
+
+        // getter "methods" have no parameters
+        if (kind != ("method") || check(LEFT_PAREN)) {
+            isGetter = false
+            consume(LEFT_PAREN, "Expect '(' after $kind name.")
+            if (!check(RIGHT_PAREN)) {
+                do {
+                    if (parameters.size >= 255) {
+                        error(peek(), "Can't have more than 255 parameters.")
+                    } else {
+                        parameters.add(consume(IDENTIFIER, "Expect parameter name."))
+                    }
+                } while (match(COMMA))
+            }
+            consume(RIGHT_PAREN, "Expect ')' after parameters.")
+        }
+        consume(LEFT_BRACE, "Expect '{' before $kind body.")
+
+        return Stmt.Function(name, parameters, parseBlock(), isGetter)
+    }
+
+    private fun parseVarDeclaration(): Stmt {
+        val name = consume(IDENTIFIER, "Expect variable name.")
+
+        var initializer: Expr = Expr.Invalid(tokens[current])
+        if (match(EQUAL)) {
+            initializer = parseExpression()
+        }
+
+        consume(SEMICOLON, "Expect ';' after variable declaration.")
+        return Stmt.Var(name, initializer)
     }
 
     private fun parseStatement(): Stmt {
-        return if (match(BREAK)) parseBreakStatement()
+        return if (match(LEFT_BRACE)) Stmt.Block(parseBlock())
+        else if (match(BREAK)) parseBreakStatement()
         else if (match(FOR)) parseForStatement()
         else if (match(IF)) parseIfStatement()
-        else if (match(LEFT_BRACE)) Stmt.Block(parseBlock())
         else if (match(PRINT)) parsePrintStatement()
         else if (match(RETURN)) parseReturnStatement()
         else if (match(WHILE)) parseWhileStatement()
         else parseExpressionStatement()
+    }
+
+    private fun parseBlock(): List<Stmt> {
+        val statements = mutableListOf<Stmt>()
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(parseDeclaration())
+        }
+        consume(RIGHT_BRACE, "Expect '}' after block.")
+        return statements
     }
 
     private fun parseBreakStatement(): Stmt {
@@ -141,18 +183,6 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         return Stmt.Print(value)
     }
 
-    private fun parseVarDeclaration(): Stmt {
-        val name = consume(IDENTIFIER, "Expect variable name.")
-
-        var initializer: Expr = Expr.Invalid(tokens[current])
-        if (match(EQUAL)) {
-            initializer = parseExpression()
-        }
-
-        consume(SEMICOLON, "Expect ';' after variable declaration.")
-        return Stmt.Var(name, initializer)
-    }
-
     private fun parseReturnStatement(): Stmt {
         val keyword = previous()
         val value = if (!check(SEMICOLON)) {
@@ -182,77 +212,8 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         return Stmt.Expression(expr)
     }
 
-    private fun parseFunction(kind: String): Stmt.Function {
-        val name = consume(IDENTIFIER, "Expect $kind name.")
-        val parameters: MutableList<Token> = ArrayList()
-        var isGetter = true
-
-        // getter "methods" have no parameters
-        if (kind != ("method") || check(LEFT_PAREN)) {
-            isGetter = false
-            consume(LEFT_PAREN, "Expect '(' after $kind name.")
-            if (!check(RIGHT_PAREN)) {
-                do {
-                    if (parameters.size >= 255) {
-                        error(peek(), "Can't have more than 255 parameters.")
-                    } else {
-                        parameters.add(consume(IDENTIFIER, "Expect parameter name."))
-                    }
-                } while (match(COMMA))
-            }
-            consume(RIGHT_PAREN, "Expect ')' after parameters.")
-        }
-        consume(LEFT_BRACE, "Expect '{' before $kind body.")
-
-        return Stmt.Function(name, parameters, parseBlock(), isGetter)
-    }
-
-    private fun parseBlock(): List<Stmt> {
-        val statements = mutableListOf<Stmt>()
-        while (!check(RIGHT_BRACE) && !isAtEnd()) {
-            statements.add(parseDeclaration())
-        }
-        consume(RIGHT_BRACE, "Expect '}' after block.")
-        return statements
-    }
-
-    private fun parseAssignment(): Expr {
-        val expr = parseOr()
-
-        if (match(EQUAL)) {
-            val equals = previous()
-            val value = parseAssignment()
-            if (expr is Expr.Variable) {
-                val name = expr.name
-                return Expr.Assign(name, value, tokens[current - 1])
-            } else if (expr is Expr.Get) {
-                return Expr.Set(expr.obj, expr.name, value)
-            }
-            error(equals, "Invalid assignment target.")
-        }
-        return expr
-    }
-
-    private fun parseOr(): Expr {
-        var expr: Expr = parseAnd()
-        while (match(OR)) {
-            val operator = previous()
-            val right: Expr = parseAnd()
-            expr = Logical(expr, operator, right)
-        }
-        return expr
-    }
-
-    private fun parseAnd(): Expr {
-        var expr = parseEquality()
-
-        while (match(AND)) {
-            val operator = previous()
-            val right = parseEquality()
-            expr = Logical(expr, operator, right)
-        }
-
-        return expr
+    fun parseExpression(): Expr {
+        return parseComma()
     }
 
     private fun parseComma(): Expr {
@@ -263,16 +224,6 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         }
 
         return expr
-    }
-
-    private fun parseKloxList(): List<Expr> {
-        val values: MutableList<Expr> = ArrayList()
-        if (!check(RIGHT_BRACKET)) {
-            do {
-                values.add(parseLambda())
-            } while (match(COMMA))
-        }
-        return values
     }
 
     private fun parseLambda(): Expr {
@@ -312,6 +263,45 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         return expr
     }
 
+    private fun parseAssignment(): Expr {
+        val expr = parseOr()
+
+        if (match(EQUAL)) {
+            val equals = previous()
+            val value = parseAssignment()
+            if (expr is Expr.Variable) {
+                val name = expr.name
+                return Expr.Assign(name, value, tokens[current - 1])
+            } else if (expr is Expr.Get) {
+                return Expr.Set(expr.obj, expr.name, value)
+            }
+            error(equals, "Invalid assignment target.")
+        }
+        return expr
+    }
+
+    private fun parseOr(): Expr {
+        var expr = parseAnd()
+        while (match(OR)) {
+            val operator = previous()
+            val right: Expr = parseAnd()
+            expr = Logical(expr, operator, right)
+        }
+        return expr
+    }
+
+    private fun parseAnd(): Expr {
+        var expr = parseEquality()
+
+        while (match(AND)) {
+            val operator = previous()
+            val right = parseEquality()
+            expr = Logical(expr, operator, right)
+        }
+
+        return expr
+    }
+
     private fun parseEquality(): Expr {
         var expr = parseComparison()
 
@@ -333,7 +323,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
     }
 
     private fun parseTerm(): Expr {
-        var expr: Expr = parseFactor()
+        var expr = parseFactor()
 
         while (match(MINUS, PLUS)) {
             expr = Expr.Binary(expr, previous(), parseFactor())
@@ -360,29 +350,25 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         }
     }
 
-    private fun finishCall(callee: Expr, token: Token): Expr {
-        val arguments: MutableList<Expr> = ArrayList()
-
-        if (!check(RIGHT_PAREN)) {
-            do {
-                if (arguments.size >= 255) {
-                    error(peek(), "Can't have more than 255 arguments.")
-                }
-                arguments.add(parseLambda())
-            } while (match(COMMA))
-        }
-
-        val paren = consume(RIGHT_PAREN, "Expect ')' after arguments.")
-
-        return Expr.Call(callee, paren, arguments, token)
-    }
-
     private fun parseCall(): Expr {
         var expr = parsePrimary()
 
         while (true) {
             expr = if (match(LEFT_PAREN)) {
-                finishCall(expr, expr.token)
+                val arguments: MutableList<Expr> = ArrayList()
+
+                if (!check(RIGHT_PAREN)) {
+                    do {
+                        if (arguments.size >= 255) {
+                            error(peek(), "Can't have more than 255 arguments.")
+                        }
+                        arguments.add(parseLambda())
+                    } while (match(COMMA))
+                }
+
+                val paren = consume(RIGHT_PAREN, "Expect ')' after arguments.")
+
+                Expr.Call(expr, paren, arguments, expr.token)
             } else if (match(DOT)) {
                 val name = consume(IDENTIFIER, "Expect property name after '.'.")
                 Expr.Get(expr, name)
@@ -404,8 +390,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
             consume(DOT, "Expect '.' after 'super'.")
             val method = consume(IDENTIFIER, "Expect superclass method name.")
             return Expr.Super(keyword, method)
-        }
-        else if (match(THIS)) return Expr.This(previous())
+        } else if (match(THIS)) return Expr.This(previous())
         else if (match(IDENTIFIER)) return Expr.Variable(previous())
         else if (match(LEFT_PAREN)) {
             val expr = parseExpression()
@@ -438,16 +423,21 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         }
     }
 
-    private fun match(vararg types: TokenType): Boolean {
-        for (type in types) {
-            if (check(type)) {
-                advance()
-                return true
-            }
+    private fun parseKloxList(): List<Expr> {
+        val values: MutableList<Expr> = ArrayList()
+        if (!check(RIGHT_BRACKET)) {
+            do {
+                values.add(parseLambda())
+            } while (match(COMMA))
         }
-        return false
+        return values
     }
 
+    // utility methods
+    private fun advance(): Token {
+        if (!isAtEnd()) current++
+        return previous()
+    }
     private fun consume(type: TokenType, message: String): Token {
         if (check(type)) return advance()
         throw error(peek(), message)
@@ -461,13 +451,26 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
         return if (isAtEnd()) false else peekNext().type === type
     }
 
-    private fun advance(): Token {
-        if (!isAtEnd()) current++
-        return previous()
+    private fun error(token: Token, message: String): ParseError {
+        if (createError) {
+            Klox.hadError = true
+            Klox.error(token, message)
+        }
+        return ParseError()
     }
 
     private fun isAtEnd(): Boolean {
         return peek().type === EOF
+    }
+
+    private fun match(vararg types: TokenType): Boolean {
+        for (type in types) {
+            if (check(type)) {
+                advance()
+                return true
+            }
+        }
+        return false
     }
 
     private fun peek(): Token {
@@ -480,14 +483,6 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
 
     private fun previous(): Token {
         return tokens[current - 1]
-    }
-
-    private fun error(token: Token, message: String): ParseError {
-        if (createError) {
-            Klox.hadError = true
-            Klox.error(token, message)
-        }
-        return ParseError()
     }
 
     private fun synchronize() {

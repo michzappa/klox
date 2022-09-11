@@ -22,9 +22,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     }
 
     // name, <defined, used>
-    private val scopes = Stack<MutableMap<String, ResolverInfo>>()
     private var currentClass: ClassType = ClassType.NONE
     private var currentFunction: FunctionType = FunctionType.NONE
+    private val scopes = Stack<MutableMap<String, ResolverInfo>>()
 
     fun resolve(statements: List<Stmt>) {
         for (statement in statements) {
@@ -40,76 +40,12 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         }
     }
 
-    private fun beginScope() {
-        scopes.push(mutableMapOf())
-    }
-
-    private fun endScope() {
-        scopes.pop()
-    }
-
-    private fun resolveLocal(expr: Expr, name: Token) {
-        for (i in scopes.size - 1 downTo 0) {
-            if (scopes[i].containsKey(name.lexeme)) {
-                interpreter.resolve(expr, scopes.size - 1 - i)
-                return
-            }
-        }
-    }
-
-    private fun resolveFunction(function: Stmt.Function, type: FunctionType) {
-        val enclosingFunction = currentFunction
-        currentFunction = type
-
-        beginScope()
-        if (!function.isGetter) {
-            for (param in function.params) {
-                declare(param)
-                define(param)
-            }
-        }
-        resolve(function.body)
-        endScope()
-
-        currentFunction = enclosingFunction
-    }
-
-    private fun resolveFunction(function: Expr.Lambda) {
-        val enclosingFunction = currentFunction
-        currentFunction = FunctionType.FUNCTION
-
-        beginScope()
-        for (param in function.params) {
-            declare(param)
-            define(param)
-        }
-        resolve(function.body)
-        endScope()
-
-        currentFunction = enclosingFunction
-    }
-
     private fun resolve(stmt: Stmt) {
         stmt.accept(this)
     }
 
     private fun resolve(expr: Expr) {
         expr.accept(this)
-    }
-
-    private fun declare(name: Token) {
-        if (scopes.isEmpty()) return
-        val scope = scopes.peek()
-        if (scope.containsKey(name.lexeme)) {
-            Klox.error(name, "Already a variable with this name in this scope.")
-        }
-        scope[name.lexeme] = ResolverInfo(defined = false, used = false)
-    }
-
-    private fun define(name: Token) {
-        if (scopes.isEmpty()) return
-        val scope = scopes.peek()
-        scope[name.lexeme]?.define()
     }
 
     override fun visitAssignExpr(expr: Expr.Assign) {
@@ -177,9 +113,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
 
     override fun visitSuperExpr(expr: Expr.Super) {
         if (currentClass == ClassType.NONE) {
-            Klox.error(expr.keyword, "Can't use 'super' outside of a class.");
+            Klox.error(expr.keyword, "Can't use 'super' outside of a class.")
         } else if (currentClass != ClassType.SUBCLASS) {
-            Klox.error(expr.keyword, "Can't use 'super' in a class with no superclass.");
+            Klox.error(expr.keyword, "Can't use 'super' in a class with no superclass.")
         }
         resolveLocal(expr, expr.keyword)
     }
@@ -297,9 +233,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     override fun visitReturnStmt(stmt: Stmt.Return) {
         if (currentFunction == FunctionType.NONE) {
             Klox.error(stmt.keyword, "Can't return from top-level code.")
-        }
-
-        if (stmt.value !is Expr.Invalid) {
+        } else if (stmt.value !is Expr.Invalid) {
             if (currentFunction == FunctionType.INITIALIZER) {
                 Klox.error(stmt.keyword, "Can't return a value from an initializer.")
             }
@@ -318,5 +252,70 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     override fun visitWhileStmt(stmt: Stmt.While) {
         resolve(stmt.condition)
         resolve(stmt.body)
+    }
+
+    // utility methods
+    private fun beginScope() {
+        scopes.push(mutableMapOf())
+    }
+
+    private fun declare(name: Token) {
+        if (scopes.isEmpty()) return
+        val scope = scopes.peek()
+        if (scope.containsKey(name.lexeme)) {
+            Klox.error(name, "Already a variable with this name in this scope.")
+        }
+        scope[name.lexeme] = ResolverInfo(defined = false, used = false)
+    }
+
+    private fun define(name: Token) {
+        if (scopes.isEmpty()) return
+        val scope = scopes.peek()
+        scope[name.lexeme]?.define()
+    }
+
+    private fun endScope() {
+        scopes.pop()
+    }
+
+    private fun resolveFunction(function: Stmt.Function, type: FunctionType) {
+        val enclosingFunction = currentFunction
+        currentFunction = type
+
+        beginScope()
+        if (!function.isGetter) {
+            for (param in function.params) {
+                declare(param)
+                define(param)
+            }
+        }
+        resolve(function.body)
+        endScope()
+
+        currentFunction = enclosingFunction
+    }
+
+    private fun resolveFunction(function: Expr.Lambda) {
+        val enclosingFunction = currentFunction
+        currentFunction = FunctionType.FUNCTION
+
+        beginScope()
+        for (param in function.params) {
+            declare(param)
+            define(param)
+        }
+        resolve(function.body)
+        endScope()
+
+        currentFunction = enclosingFunction
+    }
+
+    private fun resolveLocal(expr: Expr, name: Token) {
+        for (i in scopes.size - 1 downTo 0) {
+            if (scopes[i].containsKey(name.lexeme)) {
+                interpreter.resolve(expr, scopes.size - 1 - i)
+                return
+            }
+        }
     }
 }

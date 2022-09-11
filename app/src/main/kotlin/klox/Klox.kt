@@ -10,19 +10,22 @@ import kotlin.system.exitProcess
 class Klox {
     private val stdlib = javaClass.classLoader.getResource("stdlib.lox")!!.readText()
 
-    fun runFile(path: String) {
-        val bytes = Files.readAllBytes(Paths.get(path))
-
+    private fun loadStdLib() {
         run(stdlib)
         if (hadError) {
             System.err.println("Error loading standard library.")
             exitProcess(65)
         }
+    }
 
+    fun runFile(path: String) {
+        loadStdLib()
+
+        val bytes = Files.readAllBytes(Paths.get(path))
         run(String(bytes, Charset.defaultCharset()))
 
         if (hadError) exitProcess(65)
-        if (hadRuntimeError) exitProcess(70)
+        else if (hadRuntimeError) exitProcess(70)
     }
 
     fun runPrompt() {
@@ -30,11 +33,7 @@ class Klox {
         val reader = BufferedReader(input)
 
         while (true) {
-            run(stdlib)
-            if (hadError) {
-                System.err.println("Error loading standard library.")
-                exitProcess(65)
-            }
+            loadStdLib()
 
             print("> ")
             val line = reader.readLine()
@@ -56,7 +55,6 @@ class Klox {
         if (repl) {
             try {
                 val expr = Parser(tokens, false).parseExpression()
-
                 println(interpreter.evaluate(expr))
                 return
             } catch (e: Parser.ParseError) {
@@ -64,8 +62,7 @@ class Klox {
             }
         }
 
-        val parser = Parser(tokens)
-        val statements = parser.parse()
+        val statements = Parser(tokens).parse()
 
         // stop if there was a syntax error
         if (hadError) return
