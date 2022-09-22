@@ -59,6 +59,31 @@ fun collatz_recursive(n) {
   }
 }
 
+fun sieve(n) {
+  var is_prime = [];
+  var output = [];
+
+  for (var i = 1; i <= n; i = i + 1) {
+    is_prime = push(is_prime, true);
+  }
+
+  for (var i = 2; Math.square(i) <= n; i = i + 1) {
+    if (get_nth(is_prime, i)) {
+      for (var j = Math.square(i); j <= n; j = j + i) {
+        is_prime = set_nth(is_prime, j, false);
+      }
+    }
+  }
+
+  for (var i = 2; i <= n; i = i + 1) {
+    if (get_nth(is_prime, i)) {
+      output = push(output, i);
+    }
+  }
+
+  return output;
+}
+
 fun length(l) {
   if (empty(l)) {
     return 0;
@@ -79,6 +104,16 @@ fun last(l) {
   }
 }
 
+fun snoc(l, x) {
+  if (empty(l)) {
+    return [x];
+  } else {
+    return cons(first(l), snoc(rest(l), x));
+  }
+}
+
+fun push(l, x) { return set_nth(l, length(l) + 1, x); }
+
 fun append(l1, l2) {
   if (empty(l1)) {
     return l2;
@@ -92,6 +127,36 @@ fun reverse(l) {
     return l;
   } else {
     return append(reverse(rest(l)), [first(l)]);
+  }
+}
+
+fun get_nth(l, n) {
+  if (empty(l)) {
+    return nil;
+  } else {
+    // klox is 1-indexed
+    if (n == 1) {
+      return first(l);
+    } else {
+      return get_nth(rest(l), n - 1);
+    }
+  }
+}
+
+fun set_nth(l, n, x) {
+  if (empty(l)) {
+    if (n == 1) {
+      return [x];
+    } else {
+      // klox allows sparse lists
+      return cons(nil, set_nth([], n - 1, x));
+    }
+  } else {
+    if (n == 1) {
+      return cons(x, rest(l));
+    } else {
+      return cons(first(l), set_nth(rest(l), n - 1, x));
+    }
   }
 }
 
