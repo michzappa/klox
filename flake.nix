@@ -20,7 +20,7 @@
             clang-tools
             graalvm
             gradle
-            inputs.gradle2nix.defaultPackage
+            inputs.gradle2nix.defaultPackage.${system}
             kotlin
             kotlin-language-server
             ktlint
