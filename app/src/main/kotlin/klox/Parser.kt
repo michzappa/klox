@@ -152,7 +152,12 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
             val body = if (increment is Expr.Invalid) {
                 parseStatement()
             } else {
-                Stmt.Block(listOf(parseStatement(), Stmt.Expression(increment)))
+                val body = parseStatement()
+                if (body is Stmt.Block){
+                    Stmt.Block(listOf(body.statements, listOf(Stmt.Expression(increment))).flatten())
+                } else{
+                    Stmt.Block(listOf(body, Stmt.Expression(increment)))
+                }
             }
 
             return if (initializer is Stmt.Invalid) {
@@ -325,7 +330,7 @@ class Parser(private val tokens: List<Token>, private val createError: Boolean =
     private fun parseTerm(): Expr {
         var expr = parseFactor()
 
-        while (match(MINUS, PLUS)) {
+        while (match(MINUS, PLUS, PLUS_PLUS)) {
             expr = Expr.Binary(expr, previous(), parseFactor())
         }
 

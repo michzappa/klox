@@ -1,18 +1,3 @@
-class Math {
-  class exp(b, p) {
-    var result = 1;
-    for (var i = 0; i < p; i = i + 1) {
-      result = result * b;
-    }
-
-    return result;
-  }
-
-  class square(n) {
-    return this.exp(n, 2);
-  }
-}
-
 fun id(x) {
   return x;
 }
@@ -28,7 +13,7 @@ fun fib(n) {
   return minus_one;
 }
 
-fun fib_naive(n) { return (n < 3) ? 1 : fib1(n - 1) + fib1(n - 2); }
+fun fib_naive(n) { return (n < 3) ? 1 : fib_naive(n - 1) + fib_naive(n - 2); }
 
 fun fib_pure(n) {
   var help = fun(m, a, b) { return (m == 0) ? b : help(m - 1, b, a + b); };
@@ -67,9 +52,9 @@ fun sieve(n) {
     is_prime = push(is_prime, true);
   }
 
-  for (var i = 2; Math.square(i) <= n; i = i + 1) {
+  for (var i = 2; i * i <= n; i = i + 1) {
     if (get_nth(is_prime, i)) {
-      for (var j = Math.square(i); j <= n; j = j + i) {
+      for (var j = i * i; j <= n; j = j + i) {
         is_prime = set_nth(is_prime, j, false);
       }
     }
@@ -82,14 +67,6 @@ fun sieve(n) {
   }
 
   return output;
-}
-
-fun length(l) {
-  if (empty(l)) {
-    return 0;
-  } else {
-    return 1 + length(rest(l));
-  }
 }
 
 fun last(l) {
@@ -185,4 +162,16 @@ fun foldl(f, acc, l) {
   } else {
     return foldl(f, f(first(l), acc), rest(l));
   }
+}
+
+fun andmap(f, l){
+  return foldr(fun (b, acc) { return (f(b) and acc); }, true, l);
+}
+
+fun ormap(f, l){
+  return foldr(fun (b, acc) { return (f(b) or acc); }, false, l);
+}
+
+fun sum(l) {
+  return foldr(fun (n, acc){ return acc + n; }, 0, l);
 }

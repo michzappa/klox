@@ -467,6 +467,29 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
             true
         )
         globals.define(
+            "length",
+            object : Callable {
+                override fun arity(): Int {
+                    return 1
+                }
+
+                override fun call(interpreter: Interpreter, arguments: List<Any?>, token: Token): Any {
+                    return if (arguments[0] is List<Any?>) {
+                        (arguments[0] as List<Any?>).size
+                    } else if (arguments[0] is String) {
+                        (arguments[0] as String).length
+                    } else {
+                        throw RuntimeError(token, "probably a type error")
+                    }
+                }
+
+                override fun toString(): String {
+                    return "<native fn>"
+                }
+            },
+            true
+        )
+        globals.define(
             "first",
             object : Callable {
                 override fun arity(): Int {

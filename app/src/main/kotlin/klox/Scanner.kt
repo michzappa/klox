@@ -21,7 +21,7 @@ class Scanner(private val source: String) {
                 ',' -> addToken(COMMA)
                 '.' -> addToken(DOT)
                 '-' -> addToken(MINUS)
-                '+' -> addToken(PLUS)
+                '+' -> addToken(if (match('+')) PLUS_PLUS else PLUS)
                 ';' -> addToken(SEMICOLON)
                 '*' -> addToken(STAR)
                 '%' -> addToken(PERCENT)
