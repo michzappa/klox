@@ -3,7 +3,7 @@
 
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
-    gradle2nix.url = "github:michzappa/gradle2nix";
+    gradle2nix.url = "github:randomnetcat/gradle2nix";
     nixpkgs.url = "github:NixOs/nixpkgs/nixpkgs-unstable";
   };
 
@@ -20,7 +20,7 @@
             clang-tools
             graalvm
             gradle
-            inputs.gradle2nix.packages.${system}.default
+            inputs.gradle2nix.defaultPackage.${system}
             kotlin
             kotlin-language-server
             ktlint

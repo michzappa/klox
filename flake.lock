@@ -36,15 +36,15 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1660492553,
-        "narHash": "sha256-XsB8i+L6sVQwXMMrHwRkI1vHTuPm4Z0n7its8cH9i2k=",
-        "owner": "michzappa",
+        "lastModified": 1638650308,
+        "narHash": "sha256-KTWEI33QPP1KGh4VKwjvQqJZSBGmicupxD4kkcxR+pw=",
+        "owner": "randomnetcat",
         "repo": "gradle2nix",
-        "rev": "66434bf6d05349c1afb4f264ccafc4fb6028728a",
+        "rev": "3f9d3cb01ab32d0514844d2f3efc0cea85278cf4",
         "type": "github"
       },
       "original": {
-        "owner": "michzappa",
+        "owner": "randomnetcat",
         "repo": "gradle2nix",
         "type": "github"
       }
