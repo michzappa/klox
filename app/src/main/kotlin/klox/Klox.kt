@@ -141,17 +141,19 @@ class Klox {
 fun main(args: Array<String>) {
     val klox = Klox()
 
-    if (args.size > 2 || (args.size > 1 && args[0] != "compile")) {
-        println("Usage: klox [[compile] script]")
+    if (args.isEmpty()){
+        klox.runPrompt()
+    } else if (args.size == 1){
+        klox.runFile(args[0])
+    } else if (args.size == 2 && args[0] == "-c") {
+        print(klox.compile(args[1]))
+    } else if (args.size == 3 && args[0] == "-c" && args[1] == "-f"){
+        val inputFile = args[2]
+        File("$inputFile.scm").writeText(klox.compileFile(inputFile))
+    } else {
+        println("Usage: klox [-c [<lox_input> | -f <source_file>]")
         // exit codes in this interpreter are from the UNIX
         // <sysexits.h> header file
         exitProcess(64)
-    } else if (args.size == 1) {
-        klox.runFile(args[0])
-    } else if (args.size == 2) {
-        val inputFile = args[1]
-        File("${inputFile}.scm").writeText(klox.compileFile(inputFile))
-    } else {
-        klox.runPrompt()
     }
 }
